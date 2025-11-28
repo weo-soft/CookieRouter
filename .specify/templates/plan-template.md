@@ -31,7 +31,15 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Code Quality**: Verify feature design aligns with code quality standards (linting, documentation, complexity limits)
+
+**Testing**: Confirm testing strategy defined (unit/integration/E2E) and coverage targets established
+
+**User Experience**: Validate UX consistency with design system and accessibility requirements (if user-facing)
+
+**Performance**: Establish performance targets and monitoring approach for this feature
+
+**Quality Gates**: Identify which gates apply and how they will be verified before merge
 
 ## Project Structure
 

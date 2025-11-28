@@ -1,50 +1,117 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: N/A → 1.0.0 (initial constitution)
+- Principles added:
+  - I. Code Quality Standards
+  - II. Testing Standards
+  - III. User Experience Consistency
+  - IV. Performance Requirements
+- Sections added:
+  - Core Principles (4 principles)
+  - Quality Gates
+  - Governance
+- Templates requiring updates:
+  - ✅ .specify/templates/plan-template.md (Constitution Check section aligns)
+  - ✅ .specify/templates/spec-template.md (no changes needed)
+  - ✅ .specify/templates/tasks-template.md (no changes needed)
+- Follow-up TODOs: None
+-->
+
+# CookieRouter Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Code Quality Standards
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All code MUST adhere to established quality standards that ensure maintainability, readability, and reliability. Code quality is non-negotiable and enforced through automated tooling and review processes.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Requirements:**
+- All code MUST pass linting and static analysis checks before merge
+- Code MUST follow project-specific style guides and formatting standards
+- Functions and classes MUST be documented with clear purpose and parameter descriptions
+- Code complexity MUST be kept within defined thresholds (cyclomatic complexity limits)
+- Code MUST be reviewed by at least one peer before merge
+- Technical debt MUST be tracked and addressed within defined timeframes
+- Code MUST be self-documenting with meaningful names and clear structure
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale:** High code quality reduces bugs, improves maintainability, and enables faster feature development. Automated enforcement ensures consistency across the codebase and prevents quality degradation over time.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Testing Standards
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Comprehensive testing is mandatory for all features and changes. Tests MUST be written, maintained, and executed as part of the development workflow.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**Requirements:**
+- All new features MUST include corresponding tests (unit, integration, or end-to-end as appropriate)
+- Test coverage MUST meet or exceed defined thresholds (minimum 80% for critical paths)
+- Tests MUST be written before or alongside implementation (TDD preferred)
+- Tests MUST be deterministic, isolated, and fast-executing
+- Integration tests MUST be included for all external dependencies and API contracts
+- Test failures MUST block merges and deployments
+- Test suites MUST run automatically on every commit and pull request
+- Flaky tests MUST be fixed or removed immediately
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale:** Comprehensive testing prevents regressions, enables confident refactoring, and serves as living documentation. Automated test execution ensures issues are caught early in the development cycle.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. User Experience Consistency
+
+User-facing features MUST provide a consistent, intuitive, and accessible experience across all interfaces and interactions.
+
+**Requirements:**
+- UI/UX patterns MUST follow established design system guidelines
+- User interactions MUST be predictable and follow platform conventions
+- Error messages MUST be clear, actionable, and user-friendly
+- Loading states and feedback MUST be provided for all asynchronous operations
+- Accessibility standards (WCAG 2.1 Level AA minimum) MUST be met
+- Responsive design MUST be implemented for all web interfaces
+- User-facing text MUST be clear, concise, and free of technical jargon
+- Navigation and information architecture MUST be consistent across features
+
+**Rationale:** Consistent user experience reduces cognitive load, improves usability, and builds user trust. Accessibility ensures the product is usable by all users regardless of abilities.
+
+### IV. Performance Requirements
+
+All features MUST meet defined performance targets and resource constraints. Performance is a feature, not an afterthought.
+
+**Requirements:**
+- Response times MUST meet defined SLA targets (e.g., p95 < 200ms for API endpoints)
+- Resource usage (CPU, memory, network) MUST be monitored and within defined limits
+- Database queries MUST be optimized and avoid N+1 problems
+- Frontend assets MUST be optimized (minified, compressed, lazy-loaded where appropriate)
+- Performance budgets MUST be defined and enforced for web applications
+- Performance regression tests MUST be included in CI/CD pipeline
+- Caching strategies MUST be implemented where appropriate
+- Performance metrics MUST be tracked and reported in production
+
+**Rationale:** Performance directly impacts user satisfaction and system scalability. Proactive performance management prevents issues before they affect users and reduces infrastructure costs.
+
+## Quality Gates
+
+All code changes MUST pass the following quality gates before merge:
+
+1. **Code Quality Gate**: Linting, static analysis, and code review approval
+2. **Testing Gate**: All tests passing, coverage thresholds met
+3. **Performance Gate**: Performance tests passing, no regressions detected
+4. **UX Gate**: Design review and accessibility checks (for user-facing changes)
+
+Quality gate failures MUST be resolved before code can be merged. Exceptions require documented justification and approval.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices and guidelines. All team members and contributors MUST comply with these principles.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Amendment Procedure:**
+- Proposed amendments MUST be documented with rationale and impact analysis
+- Amendments require review and approval from project maintainers
+- Constitution version MUST be incremented according to semantic versioning:
+  - MAJOR: Backward incompatible principle removals or redefinitions
+  - MINOR: New principles or sections added
+  - PATCH: Clarifications, wording improvements, non-semantic refinements
+- All amendments MUST be reflected in the Sync Impact Report
+
+**Compliance Review:**
+- All pull requests MUST verify compliance with relevant principles
+- Regular compliance audits MUST be conducted (quarterly recommended)
+- Violations MUST be addressed through code changes or documented exceptions
+- Complexity or performance trade-offs MUST be justified in documentation
+
+**Version**: 1.0.0 | **Ratified**: 2025-11-23 | **Last Amended**: 2025-11-23
