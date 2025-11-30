@@ -402,11 +402,60 @@ export class RouteDisplay {
 
   /**
    * Format time in seconds to readable format
+   * Includes years, days, hours, minutes, and seconds as appropriate
+   * Handles very long durations (hundreds/thousands of days)
    */
   formatTime(seconds) {
-    if (seconds < 60) return `${seconds.toFixed(1)}s`;
-    if (seconds < 3600) return `${(seconds / 60).toFixed(1)}m`;
-    return `${(seconds / 3600).toFixed(2)}h`;
+    if (seconds < 60) {
+      return `${seconds.toFixed(1)}s`;
+    }
+    
+    if (seconds < 3600) {
+      return `${(seconds / 60).toFixed(1)}m`;
+    }
+    
+    if (seconds < 86400) {
+      // Less than 1 day, show hours
+      return `${(seconds / 3600).toFixed(2)}h`;
+    }
+    
+    // 1 day or more
+    const days = Math.floor(seconds / 86400);
+    const remainingSeconds = seconds % 86400;
+    const hours = remainingSeconds / 3600;
+    
+    // Check if we need to show years (365 days = 1 year)
+    if (days >= 365) {
+      const years = Math.floor(days / 365);
+      const remainingDays = days % 365;
+      
+      if (remainingDays === 0 && hours < 0.01) {
+        // Exactly years, no remaining days/hours
+        return `${years}y`;
+      }
+      
+      if (remainingDays === 0) {
+        // Years with hours only
+        return `${years}y ${hours.toFixed(2)}h`;
+      }
+      
+      if (hours < 0.01) {
+        // Years and days, no hours
+        return `${years}y ${remainingDays}d`;
+      }
+      
+      // Years, days, and hours
+      return `${years}y ${remainingDays}d ${hours.toFixed(2)}h`;
+    }
+    
+    // Less than 1 year, show days and hours
+    if (hours < 0.01) {
+      // Less than 0.01 hours remaining, just show days
+      return `${days}d`;
+    }
+    
+    // Show days and hours
+    return `${days}d ${hours.toFixed(2)}h`;
   }
 
   /**
