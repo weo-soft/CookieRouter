@@ -399,3 +399,47 @@ export function updateLastAccessed(savedRouteId) {
   saveSavedRoute(savedRoute);
 }
 
+/**
+ * Save imported save game data to localStorage (temporary storage, not persisted across sessions)
+ * @param {Object} importedSaveGame - ImportedSaveGame object to save
+ * @throws {Error} If localStorage quota exceeded
+ */
+export function saveImportedSaveGame(importedSaveGame) {
+  try {
+    // Store without rawSaveString to save space
+    const { rawSaveString, ...dataToStore } = importedSaveGame;
+    localStorage.setItem(STORAGE_PREFIX + 'importedSaveGame', JSON.stringify(dataToStore));
+  } catch (error) {
+    if (error.name === 'QuotaExceededError') {
+      throw new Error('localStorage quota exceeded. Please clear old data.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get imported save game data from localStorage (temporary storage)
+ * @returns {Object|null} ImportedSaveGame object or null if not found
+ */
+export function getImportedSaveGameFromStorage() {
+  try {
+    const data = localStorage.getItem(STORAGE_PREFIX + 'importedSaveGame');
+    if (!data) return null;
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading imported save game from localStorage:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear imported save game data from localStorage
+ */
+export function clearImportedSaveGameFromStorage() {
+  try {
+    localStorage.removeItem(STORAGE_PREFIX + 'importedSaveGame');
+  } catch (error) {
+    console.error('Error clearing imported save game from localStorage:', error);
+  }
+}
+

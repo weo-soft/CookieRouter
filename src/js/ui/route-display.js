@@ -100,6 +100,7 @@ export class RouteDisplay {
           <span>Algorithm: ${algorithm}</span>
           <span>Completion Time: ${this.formatTime(completionTime)}</span>
           <span>Total Steps: ${totalCount}</span>
+          ${this.currentRoute.usedImportedData ? '<span class="imported-data-indicator" title="This route was calculated using imported save game data">📥 Using Imported Data</span>' : ''}
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar" role="progressbar" 
