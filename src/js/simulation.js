@@ -123,10 +123,13 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     let price;
     
     // Check if it's a building or upgrade
+    let buildingCount = null; // Will be set if it's a building
     if (stepGame.buildingNames.includes(item)) {
       // It's a building
       price = stepGame.buildingPrice(item);
       stepGame.purchaseBuilding(item);
+      // Get the count after purchase (includes the one just purchased)
+      buildingCount = stepGame.numBuildings[item];
     } else {
       // It's an upgrade - find it in the menu before purchase
       let upgrade = null;
@@ -152,7 +155,8 @@ export async function calculateRoute(category, startingBuildings = {}, options =
       cookiesRequired: price,
       cookiesPerSecond: rate,
       timeElapsed: timeBefore,
-      totalCookies: cookiesBefore
+      totalCookies: cookiesBefore,
+      buildingCount: buildingCount // null for upgrades, number for buildings
     });
   }
   

@@ -3,7 +3,7 @@
  * Displays calculated route with building purchase order
  */
 
-import { getProgress, saveProgress, updateProgress } from '../storage.js';
+import { getProgress, saveProgress, updateProgress, clearProgress } from '../storage.js';
 import { formatNumber } from '../utils/format.js';
 
 export class RouteDisplay {
@@ -78,6 +78,10 @@ export class RouteDisplay {
       return;
     }
 
+    // Save scroll position before re-rendering
+    const routeList = this.container.querySelector('.route-list');
+    const savedScrollTop = routeList ? routeList.scrollTop : 0;
+
     const { buildings, completionTime, algorithm } = this.currentRoute;
     const completedCount = this.progress.completedBuildings.length;
     const totalCount = buildings.length;
@@ -87,7 +91,10 @@ export class RouteDisplay {
       <div class="route-header">
         <div class="route-header-top">
           <h2>Building Purchase Route${this.isSavedRoute ? ' (Saved)' : ''}</h2>
-          ${this.onSaveRoute && !this.isSavedRoute ? `<button id="save-route-btn" class="btn-primary" aria-label="Save this route">Save Route</button>` : ''}
+          <div class="route-header-actions">
+            ${completedCount > 0 ? `<button id="reset-progress-btn" class="btn-secondary" aria-label="Reset all progress">Reset</button>` : ''}
+            ${this.onSaveRoute && !this.isSavedRoute ? `<button id="save-route-btn" class="btn-primary" aria-label="Save this route">Save Route</button>` : ''}
+          </div>
         </div>
         <div class="route-meta">
           <span>Algorithm: ${algorithm}</span>
@@ -122,7 +129,7 @@ export class RouteDisplay {
               </label>
               <div class="step-content">
                 <div class="step-info">
-                  <span class="step-building">${this.escapeHtml(step.buildingName)}</span>
+                  <span class="step-building">${this.escapeHtml(step.buildingName)}${step.buildingCount !== null && step.buildingCount !== undefined ? ` [${step.buildingCount}]` : ''}</span>
                   <span class="step-separator">•</span>
                   <span class="step-detail">Cookies: ${formatNumber(step.cookiesRequired)}</span>
                   <span class="step-separator">•</span>
@@ -131,6 +138,13 @@ export class RouteDisplay {
                   <span class="step-detail">Time: ${this.formatTime(step.timeElapsed)}</span>
                 </div>
               </div>
+              <button 
+                class="step-check-all-btn" 
+                data-step-order="${step.order}"
+                aria-label="Check all previous steps up to step ${step.order}"
+                title="Check all previous steps">
+                ✓ All
+              </button>
             </div>
           `;
         }).join('')}
@@ -145,6 +159,29 @@ export class RouteDisplay {
       });
     });
 
+    // Attach "check all previous" button listeners
+    this.container.querySelectorAll('.step-check-all-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        // Use currentTarget to ensure we get the button, not a child element
+        const stepOrder = parseInt(e.currentTarget.dataset.stepOrder);
+        if (!isNaN(stepOrder)) {
+          this.checkAllPreviousSteps(stepOrder);
+        }
+      });
+    });
+
+    // Attach reset progress button listener
+    const resetBtn = this.container.querySelector('#reset-progress-btn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset all progress? This will uncheck all steps.')) {
+          this.resetAllProgress();
+        }
+      });
+    }
+
     // Attach save route button listener
     const saveBtn = this.container.querySelector('#save-route-btn');
     if (saveBtn && this.onSaveRoute) {
@@ -154,6 +191,99 @@ export class RouteDisplay {
         }
       });
     }
+
+    // Restore scroll position after rendering
+    if (savedScrollTop > 0) {
+      const newRouteList = this.container.querySelector('.route-list');
+      if (newRouteList) {
+        // Use requestAnimationFrame to ensure DOM is fully updated
+        requestAnimationFrame(() => {
+          newRouteList.scrollTop = savedScrollTop;
+        });
+      }
+    }
+  }
+
+  /**
+   * Reset all progress - uncheck all steps
+   */
+  resetAllProgress() {
+    if (!this.currentRoute) return;
+    
+    // Clear progress from storage
+    clearProgress(this.currentRoute.id);
+    
+    // Reset progress object
+    this.progress = {
+      routeId: this.currentRoute.id,
+      completedBuildings: [],
+      lastUpdated: Date.now()
+    };
+    
+    // Save the empty progress
+    saveProgress(this.progress);
+    
+    // Re-render to update the UI
+    this.render();
+  }
+
+  /**
+   * Check all previous steps up to and including the given step
+   * @param {number} stepOrder - The step order to check up to
+   */
+  checkAllPreviousSteps(stepOrder) {
+    if (!this.currentRoute) return;
+    if (!stepOrder || stepOrder < 1) return;
+    
+    // Get fresh progress from storage to ensure we have the latest state
+    const currentProgress = getProgress(this.currentRoute.id);
+    
+    // Ensure progress exists
+    if (!currentProgress) {
+      this.progress = {
+        routeId: this.currentRoute.id,
+        completedBuildings: [],
+        lastUpdated: Date.now()
+      };
+      saveProgress(this.progress);
+    } else {
+      this.progress = currentProgress;
+    }
+
+    // Build a new array containing ONLY steps from 1 to stepOrder
+    // This ensures we never include steps beyond the clicked step
+    const finalCompletedBuildings = [];
+    for (let i = 1; i <= stepOrder; i++) {
+      // Include step i if it was already completed OR if we're checking it now
+      if (this.progress.completedBuildings.includes(i)) {
+        finalCompletedBuildings.push(i);
+      } else {
+        // This step wasn't completed, so we're checking it now
+        finalCompletedBuildings.push(i);
+      }
+    }
+    
+    // Sort to ensure proper order
+    finalCompletedBuildings.sort((a, b) => a - b);
+    
+    // Update progress with only steps up to stepOrder
+    this.progress.completedBuildings = finalCompletedBuildings;
+    this.progress.lastUpdated = Date.now();
+    this.progress.routeId = this.currentRoute.id;
+
+    // Update progress in storage
+    try {
+      updateProgress(this.currentRoute.id, this.progress.completedBuildings);
+    } catch (error) {
+      if (error.message && error.message.includes('not found')) {
+        saveProgress(this.progress);
+      } else {
+        console.error('Error updating progress:', error);
+        saveProgress(this.progress);
+      }
+    }
+    
+    this.render(); // Re-render to update progress bar and checkboxes
   }
 
   /**
