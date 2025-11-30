@@ -10,7 +10,10 @@ import { StartingBuildingsSelector } from './js/ui/starting-buildings.js';
 import { CustomCategoryForm } from './js/ui/custom-category-form.js';
 import { SaveRouteDialog } from './js/ui/save-route-dialog.js';
 import { SavedRoutesList } from './js/ui/saved-routes-list.js';
+import { SaveGameImportDialog } from './js/ui/save-game-import-dialog.js';
+import { SaveGameDetailsView } from './js/ui/save-game-details-view.js';
 import { calculateRoute } from './js/simulation.js';
+import { getImportedSaveGame, getImportState } from './js/save-game-importer.js';
 
 // Initialize UI components
 const versionSelector = new VersionSelector('version-selector-header', handleVersionSelect);
@@ -20,6 +23,8 @@ const startingBuildingsSelector = new StartingBuildingsSelector('starting-buildi
 const saveRouteDialog = new SaveRouteDialog('save-route-dialog-section', handleRouteSaved, handleSaveRouteCancel);
 const savedRoutesList = new SavedRoutesList('saved-routes-section', handleSavedRouteSelect);
 const routeDisplay = new RouteDisplay('route-section', handleSaveRouteClick);
+const saveGameImportDialog = new SaveGameImportDialog('save-game-import-dialog-section', handleSaveGameImported, handleSaveGameCleared);
+const saveGameDetailsView = new SaveGameDetailsView('save-game-details-section');
 
 let isCalculating = false;
 let currentVersion = 'v2052'; // Default version
@@ -153,6 +158,88 @@ function handleCategoryFormCancel() {
   // Form is hidden, nothing special needed
 }
 
+/**
+ * Handle save game imported successfully
+ */
+async function handleSaveGameImported(importedSaveGame) {
+  // Auto-populate starting buildings from imported data
+  if (importedSaveGame && importedSaveGame.buildingCounts) {
+    startingBuildingsSelector.setStartingBuildings(importedSaveGame.buildingCounts);
+    // Update current starting buildings
+    currentStartingBuildings = importedSaveGame.buildingCounts;
+  }
+
+  // Auto-select version if detected
+  if (importedSaveGame && importedSaveGame.version) {
+    versionSelector.selectVersion(importedSaveGame.version);
+    currentVersion = importedSaveGame.version;
+  }
+
+  // Refresh details view
+  if (saveGameDetailsView) {
+    saveGameDetailsView.refresh();
+  }
+
+  // Update import status indicator
+  updateImportStatusIndicator();
+
+  // Recalculate route if a category is selected
+  const selectedCategory = categorySelector.getSelectedCategory();
+  if (selectedCategory) {
+    handleCategorySelect(selectedCategory);
+  }
+}
+
+/**
+ * Handle save game cleared
+ */
+function handleSaveGameCleared() {
+  // Clear starting buildings
+  startingBuildingsSelector.setStartingBuildings({});
+  currentStartingBuildings = {};
+  
+  // Refresh details view
+  if (saveGameDetailsView) {
+    saveGameDetailsView.refresh();
+  }
+  
+  // Update import status indicator
+  updateImportStatusIndicator();
+  
+  // Recalculate route if a category is selected
+  const selectedCategory = categorySelector.getSelectedCategory();
+  if (selectedCategory) {
+    handleCategorySelect(selectedCategory);
+  }
+}
+
+/**
+ * Update import status indicator in header
+ */
+function updateImportStatusIndicator() {
+  const indicatorContainer = document.getElementById('import-status-indicator');
+  if (!indicatorContainer) return;
+
+  const importState = getImportState();
+  
+  if (importState.isLoaded) {
+    indicatorContainer.innerHTML = `
+      <span class="import-status-badge loaded" title="Save game imported">
+        <span class="status-icon">✓</span>
+        <span class="status-text">Imported</span>
+        ${importState.version ? `<span class="status-version">${importState.version}</span>` : ''}
+      </span>
+    `;
+  } else {
+    indicatorContainer.innerHTML = `
+      <span class="import-status-badge not-loaded" title="No save game imported">
+        <span class="status-icon">○</span>
+        <span class="status-text">Not Imported</span>
+      </span>
+    `;
+  }
+}
+
 async function init() {
   try {
     await versionSelector.init();
@@ -164,6 +251,28 @@ async function init() {
     categorySelector.setOnCreateCategory(() => {
       customCategoryForm.show();
     });
+    
+    // Set up import save game button
+    const importBtn = document.getElementById('import-save-game-btn');
+    if (importBtn) {
+      importBtn.addEventListener('click', () => {
+        saveGameImportDialog.show();
+      });
+    }
+
+    // Initialize and update import status indicator
+    updateImportStatusIndicator();
+
+    // Initialize save game details view
+    if (saveGameDetailsView) {
+      saveGameDetailsView.init();
+    }
+
+    // Check if there's an imported save game and auto-populate
+    const importedSaveGame = getImportedSaveGame();
+    if (importedSaveGame) {
+      handleSaveGameImported(importedSaveGame);
+    }
     
     console.log('Cookie Clicker Building Order Simulator initialized');
   } catch (error) {

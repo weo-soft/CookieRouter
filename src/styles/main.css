@@ -27,6 +27,8 @@ header {
   align-items: center;
   margin-bottom: 30px;
   padding: 0 20px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 header h1 {
@@ -39,6 +41,12 @@ header h1 {
 #version-selector-header {
   display: flex;
   align-items: center;
+}
+
+#import-status-indicator {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
 }
 
 .version-select-header {
@@ -72,6 +80,7 @@ main {
 #version-section,
 #category-section,
 #custom-category-section,
+#save-game-details-section,
 #starting-buildings-section,
 #saved-routes-section,
 #route-section {
@@ -283,6 +292,63 @@ main {
   margin-top: 10px;
   font-size: 0.9rem;
   color: #666;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.imported-data-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  border-radius: 4px;
+  color: #1976d2;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.imported-data-indicator:hover {
+  background: #bbdefb;
+}
+
+/* Import Status Indicator */
+.import-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.import-status-badge.loaded {
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+  color: #2e7d32;
+}
+
+.import-status-badge.not-loaded {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  color: #666;
+}
+
+.import-status-badge .status-icon {
+  font-size: 0.9rem;
+}
+
+.import-status-badge .status-text {
+  font-size: 0.85rem;
+}
+
+.import-status-badge .status-version {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-left: 4px;
 }
 
 .progress-bar-container {
@@ -1286,6 +1352,406 @@ main {
   .saved-route-meta,
   .saved-route-dates {
     font-size: 0.85rem;
+  }
+}
+
+/* Save Game Import Dialog Styles */
+#save-game-import-dialog-section {
+  position: relative;
+}
+
+.save-game-import-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-in;
+}
+
+.save-game-import-dialog {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+.save-game-import-dialog h2 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+}
+
+.save-game-import-dialog .form-group {
+  margin-bottom: 20px;
+}
+
+.save-game-import-dialog .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.save-game-import-dialog .form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  min-height: 150px;
+}
+
+.save-game-import-dialog .form-group textarea:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.save-game-import-dialog .help-text {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.save-game-import-dialog .error-message {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  padding: 8px;
+  background: #ffebee;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  display: none;
+}
+
+.save-game-import-dialog .success-message {
+  color: #2e7d32;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  padding: 8px;
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  display: none;
+}
+
+.save-game-import-dialog .loading-indicator {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  color: #666;
+}
+
+.save-game-import-dialog .spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #4a90e2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.save-game-import-dialog .form-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.save-game-import-dialog .import-status {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.save-game-import-dialog .import-status h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+.save-game-import-dialog .import-status p {
+  margin: 8px 0;
+  color: #666;
+}
+
+.save-game-import-dialog .import-status .warnings {
+  margin-top: 12px;
+  padding: 12px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+}
+
+.save-game-import-dialog .import-status .warnings ul {
+  margin: 8px 0 0 20px;
+  color: #856404;
+}
+
+.save-game-import-dialog .import-status .warnings li {
+  margin: 4px 0;
+}
+
+/* Responsive design for save game import dialog */
+@media (max-width: 768px) {
+  .save-game-import-dialog {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .save-game-import-dialog .form-actions {
+    flex-direction: column;
+  }
+
+  .save-game-import-dialog .form-actions button {
+    width: 100%;
+  }
+
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #import-save-game-btn {
+    width: 100%;
+  }
+}
+
+/* Save Game Details View Styles */
+.save-game-details-container {
+  width: 100%;
+}
+
+.save-game-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.save-game-details-header h3 {
+  color: #2c3e50;
+  font-size: 1.3rem;
+  margin: 0;
+  flex: 1;
+}
+
+.save-game-details-content {
+  transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+  overflow: hidden;
+}
+
+.save-game-details-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.save-game-details-empty {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.save-game-stats,
+.save-game-buildings,
+.save-game-upgrades,
+.save-game-achievements,
+.save-game-version-info,
+.save-game-metadata {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.save-game-stats:last-child,
+.save-game-buildings:last-child,
+.save-game-upgrades:last-child,
+.save-game-achievements:last-child,
+.save-game-version-info:last-child,
+.save-game-metadata:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.save-game-stats h4,
+.save-game-buildings h4,
+.save-game-upgrades h4,
+.save-game-achievements h4,
+.save-game-version-info h4,
+.save-game-metadata h4 {
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.upgrades-list,
+.achievements-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.upgrade-item,
+.achievement-item {
+  padding: 6px 10px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.upgrade-item.upgrade-purchased {
+  background: #e8f5e9;
+  border-color: #4caf50;
+}
+
+.upgrade-item.upgrade-unlocked {
+  background: #fff3e0;
+  border-color: #ff9800;
+}
+
+.upgrade-name {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.upgrades-section {
+  margin-bottom: 20px;
+}
+
+.upgrades-section:last-child {
+  margin-bottom: 0;
+}
+
+.upgrades-section-title {
+  margin: 0 0 12px 0;
+  color: #555;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.achievements-note {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+  margin: 8px 0;
+}
+
+.stats-grid,
+.info-grid,
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.stat-item,
+.info-item,
+.metadata-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.stat-label,
+.info-label,
+.metadata-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.stat-value,
+.info-value,
+.metadata-value {
+  font-size: 1.1rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.buildings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.building-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.building-item:hover {
+  background: #f0f0f0;
+  border-color: #ccc;
+}
+
+.building-name {
+  font-weight: 500;
+  color: #2c3e50;
+  flex: 1;
+}
+
+.building-count {
+  font-weight: 600;
+  color: #4a90e2;
+  font-size: 1.1rem;
+  margin-left: 12px;
+}
+
+/* Responsive design for save game details view */
+@media (max-width: 768px) {
+  .stats-grid,
+  .info-grid,
+  .metadata-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .buildings-grid {
+    grid-template-columns: 1fr;
   }
 }
 

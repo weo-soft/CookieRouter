@@ -5,16 +5,45 @@
 
 import { Router } from './router.js';
 import { saveRoute } from './storage.js';
+import { getImportedSaveGame } from './save-game-importer.js';
 
 /**
  * Calculates the optimal building purchase route for a given category
  * @param {Object} category - Category configuration
- * @param {Object} startingBuildings - Optional map of building names to counts already owned
+ * @param {Object} startingBuildings - Optional map of building names to counts already owned (manual override)
  * @param {Object} options - Optional simulation options
- * @param {string} versionId - Game version ID (default: 'v2052')
- * @returns {Promise<Object>} Route object
+ * @param {string} versionId - Game version ID (default: 'v2052', can be overridden by imported save)
+ * @returns {Promise<Object>} Route object with metadata about imported data usage
  */
 export async function calculateRoute(category, startingBuildings = {}, options = {}, versionId = 'v2052') {
+  // Check for imported save game data
+  const importedSaveGame = getImportedSaveGame();
+  let usedImportedData = false;
+  let effectiveVersionId = versionId;
+  let effectiveStartingBuildings = { ...startingBuildings };
+  let effectiveHardcoreMode = category.hardcoreMode || false;
+
+  // Use imported save game data if available
+  if (importedSaveGame) {
+    usedImportedData = true;
+    
+    // Use imported version if available and not manually overridden
+    if (importedSaveGame.version && versionId === 'v2052') {
+      effectiveVersionId = importedSaveGame.version;
+    }
+    
+    // Merge imported building counts with manual starting buildings
+    // Manual starting buildings take precedence (override imported data)
+    if (importedSaveGame.buildingCounts) {
+      effectiveStartingBuildings = { ...importedSaveGame.buildingCounts, ...startingBuildings };
+    }
+    
+    // Use imported hardcore mode if category doesn't specify it
+    if (importedSaveGame.hardcoreMode !== undefined && category.hardcoreMode === undefined) {
+      effectiveHardcoreMode = importedSaveGame.hardcoreMode;
+    }
+  }
+
   const {
     algorithm = 'GPL',
     lookahead = 1,
@@ -25,15 +54,16 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   const { Game } = await import('./game.js');
   const categoryFunctions = await import('./categories.js');
   
-  // Load the selected version
+  // Load the selected version (use effective version from imported data if available)
   let version;
   try {
-    const versionModules = await import(`../data/versions/${versionId}.js`);
+    const versionModules = await import(`../data/versions/${effectiveVersionId}.js`);
     version = versionModules.default;
   } catch (error) {
-    console.warn(`Failed to load version ${versionId}, falling back to v2052`, error);
+    console.warn(`Failed to load version ${effectiveVersionId}, falling back to v2052`, error);
     const versionModules = await import('../data/versions/v2052.js');
     version = versionModules.default;
+    effectiveVersionId = 'v2052';
   }
 
   // Create game instance from category
@@ -70,7 +100,7 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     game.targetCookies = category.targetCookies;
     game.playerCps = category.playerCps || 8;
     game.playerDelay = category.playerDelay || 1;
-    game.hardcoreMode = category.hardcoreMode || false;
+    game.hardcoreMode = effectiveHardcoreMode;
     
     // Apply initial buildings from category
     if (category.initialBuildings) {
@@ -80,8 +110,8 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     }
   }
 
-  // Apply starting buildings (user's current state)
-  for (const [buildingName, count] of Object.entries(startingBuildings)) {
+  // Apply starting buildings (merged from imported data and manual override)
+  for (const [buildingName, count] of Object.entries(effectiveStartingBuildings)) {
     if (game.buildingNames.includes(buildingName)) {
       game.numBuildings[buildingName] = (game.numBuildings[buildingName] || 0) + count;
     }
@@ -166,10 +196,12 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     categoryId: category.id,
     buildings: routeBuildings,
     calculatedAt: Date.now(),
-    startingBuildings: startingBuildings,
+    startingBuildings: effectiveStartingBuildings,
     algorithm: algorithm,
     lookahead: lookahead,
-    completionTime: result.completionTime()
+    completionTime: result.completionTime(),
+    usedImportedData: usedImportedData,
+    versionId: effectiveVersionId
   };
 
   // Save route to localStorage
