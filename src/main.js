@@ -12,6 +12,7 @@ import { SaveRouteDialog } from './js/ui/save-route-dialog.js';
 import { SavedRoutesList } from './js/ui/saved-routes-list.js';
 import { SaveGameImportDialog } from './js/ui/save-game-import-dialog.js';
 import { SaveGameDetailsView } from './js/ui/save-game-details-view.js';
+import { RouteCreationWizard } from './js/ui/route-creation-wizard.js';
 import { calculateRoute } from './js/simulation.js';
 import { getImportedSaveGame, getImportState } from './js/save-game-importer.js';
 
@@ -25,6 +26,7 @@ const savedRoutesList = new SavedRoutesList('saved-routes-section', handleSavedR
 const routeDisplay = new RouteDisplay('route-section', handleSaveRouteClick);
 const saveGameImportDialog = new SaveGameImportDialog('save-game-import-dialog-section', handleSaveGameImported, handleSaveGameCleared);
 const saveGameDetailsView = new SaveGameDetailsView('save-game-details-section');
+const routeCreationWizard = new RouteCreationWizard('route-creation-wizard-section', handleWizardComplete, handleWizardCancel);
 
 let isCalculating = false;
 let currentVersion = 'v2052'; // Default version
@@ -214,6 +216,39 @@ function handleSaveGameCleared() {
 }
 
 /**
+ * Handle wizard completion
+ * @param {Object} route - Calculated route
+ * @param {Object} category - Category configuration
+ * @param {string} versionId - Game version ID
+ */
+function handleWizardComplete(route, category, versionId) {
+  // Set category and version on route display for saving
+  if (category && versionId) {
+    routeDisplay.setCategoryAndVersion(category, versionId);
+  }
+  
+  // Display the calculated route
+  routeDisplay.displayRoute(route);
+  
+  // Refresh saved routes list to show the new route
+  if (savedRoutesList) {
+    savedRoutesList.refresh();
+  }
+  console.log('Route created via wizard:', route);
+  if (category) {
+    console.log('Category:', category);
+  }
+}
+
+/**
+ * Handle wizard cancellation
+ */
+function handleWizardCancel() {
+  // Wizard was cancelled, nothing special needed
+  console.log('Wizard cancelled');
+}
+
+/**
  * Update import status indicator in header
  */
 function updateImportStatusIndicator() {
@@ -252,6 +287,14 @@ async function init() {
       customCategoryForm.show();
     });
     
+    // Set up create route button
+    const createRouteBtn = document.getElementById('create-route-btn');
+    if (createRouteBtn) {
+      createRouteBtn.addEventListener('click', () => {
+        routeCreationWizard.show();
+      });
+    }
+
     // Set up import save game button
     const importBtn = document.getElementById('import-save-game-btn');
     if (importBtn) {

@@ -1755,3 +1755,562 @@ main {
   }
 }
 
+/* Route Creation Wizard Styles */
+.route-creation-wizard-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-in;
+}
+
+.route-creation-wizard {
+  background: white;
+  border-radius: 8px;
+  padding: 0;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+.wizard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.wizard-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+}
+
+.wizard-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.wizard-close-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.wizard-step-indicator-container {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.wizard-step-indicator {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.wizard-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  border-radius: 6px;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.wizard-step::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: #e0e0e0;
+  z-index: -1;
+}
+
+.wizard-step:last-child::after {
+  display: none;
+}
+
+.wizard-step.active {
+  background: #e8f4f8;
+}
+
+.wizard-step.active .step-number {
+  background: #4a90e2;
+  color: white;
+}
+
+.wizard-step.completed .step-number {
+  background: #28a745;
+  color: white;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-bottom: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.step-label {
+  font-size: 0.85rem;
+  color: #666;
+  text-align: center;
+}
+
+.wizard-step.active .step-label {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.wizard-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.wizard-step-content h2 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+}
+
+.step-description {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.wizard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-top: 1px solid #e0e0e0;
+  gap: 10px;
+}
+
+.wizard-footer .btn-primary,
+.wizard-footer .btn-secondary {
+  min-width: 100px;
+}
+
+/* Responsive design for wizard */
+@media (max-width: 768px) {
+  .route-creation-wizard {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .wizard-step-indicator {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .wizard-step::after {
+    display: none;
+  }
+
+  .wizard-footer {
+    flex-direction: column;
+  }
+
+  .wizard-footer button {
+    width: 100%;
+  }
+}
+
+/* Wizard Step 1: Initial Setup Styles */
+.setup-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.setup-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: white;
+}
+
+.setup-option:hover {
+  border-color: #4a90e2;
+  background: #f8f9fa;
+}
+
+.setup-option.selected {
+  border-color: #4a90e2;
+  background: #e8f4f8;
+}
+
+.setup-option input[type="radio"] {
+  margin-right: 12px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-content strong {
+  display: block;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+}
+
+.option-content p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.setup-content {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  min-height: 100px;
+}
+
+.info-text {
+  color: #666;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Inline import dialog in wizard */
+#wizard-import-dialog-container .save-game-import-dialog-overlay {
+  position: relative;
+  background: transparent;
+  display: block;
+}
+
+#wizard-import-dialog-container .save-game-import-dialog {
+  box-shadow: none;
+  max-width: 100%;
+  width: 100%;
+  padding: 0;
+}
+
+#wizard-import-dialog-container .save-game-import-dialog h2 {
+  display: none;
+}
+
+/* Manual setup in wizard */
+#wizard-manual-setup-container .starting-buildings-container {
+  background: white;
+  border-radius: 6px;
+  padding: 15px;
+}
+
+#wizard-manual-setup-container .starting-buildings-header {
+  margin-bottom: 15px;
+}
+
+#wizard-manual-setup-container .starting-buildings-content {
+  display: block !important;
+}
+
+#wizard-manual-setup-container .starting-buildings-content.collapsed {
+  display: none !important;
+}
+
+/* Wizard Step 2: Category Selection Styles */
+.category-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.category-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: white;
+}
+
+.category-option:hover {
+  border-color: #4a90e2;
+  background: #f8f9fa;
+}
+
+.category-option.selected {
+  border-color: #4a90e2;
+  background: #e8f4f8;
+}
+
+.category-option input[type="radio"] {
+  margin-right: 12px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.category-content {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  min-height: 200px;
+}
+
+.category-settings-adjustment {
+  background: white;
+  padding: 20px;
+  border-radius: 6px;
+  margin-top: 15px;
+}
+
+.category-settings-adjustment h3 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.category-settings-adjustment .form-group {
+  margin-bottom: 15px;
+}
+
+.category-settings-adjustment .form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.category-settings-adjustment .form-group input[type="number"],
+.category-settings-adjustment .form-group input[type="checkbox"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.category-settings-adjustment .form-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+}
+
+.category-settings-adjustment .form-group label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Category selector in wizard */
+#wizard-category-selector-container .category-selector {
+  background: white;
+  border-radius: 6px;
+  padding: 15px;
+}
+
+/* Custom category form in wizard */
+#wizard-custom-category-container .custom-category-form {
+  background: white;
+  border-radius: 6px;
+  padding: 15px;
+}
+
+/* Wizard Step 3: Summary & Calculate Styles */
+.summary-section {
+  margin-bottom: 20px;
+}
+
+.summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.summary-item {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #4a90e2;
+}
+
+.summary-item h3 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.summary-item p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.summary-detail {
+  font-size: 0.9rem;
+  color: #888;
+  margin-left: 10px;
+}
+
+.calculation-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.calculation-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.calculating-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+}
+
+.calculating-indicator .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4a90e2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.calculation-progress {
+  text-align: center;
+  color: #666;
+}
+
+.calculation-progress p {
+  margin: 0;
+}
+
+/* Error message styles */
+.error-message {
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 15px;
+  color: #c33;
+  font-size: 0.9rem;
+}
+
+.error-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.error-list li {
+  margin: 5px 0;
+}
+
+.error-field {
+  border-color: #c33 !important;
+  background: #fee !important;
+}
+
+.error-option {
+  border-color: #c33 !important;
+  background: #fee !important;
+}
+
+/* Focus management for accessibility */
+.route-creation-wizard-overlay:focus {
+  outline: none;
+}
+
+.route-creation-wizard-overlay[tabindex="-1"]:focus {
+  outline: none;
+}
+
+.route-creation-wizard:focus {
+  outline: 2px solid #4a90e2;
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Smooth transitions */
+.wizard-step-content {
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Print styles - hide wizard when printing */
+@media print {
+  .route-creation-wizard-overlay {
+    display: none !important;
+  }
+}
+

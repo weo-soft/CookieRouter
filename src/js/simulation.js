@@ -144,6 +144,8 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   stepGame.timeElapsed = game.timeElapsed;
   stepGame.history = [];
   
+  let previousTimeElapsed = 0; // Track previous step's time for calculating time since last step
+  
   for (let i = 0; i < result.history.length; i++) {
     const item = result.history[i];
     
@@ -179,15 +181,22 @@ export async function calculateRoute(category, startingBuildings = {}, options =
       }
     }
     
+    // Calculate time since last step
+    const timeSinceLastStep = timeBefore - previousTimeElapsed;
+    
     routeBuildings.push({
       order: i + 1,
       buildingName: item, // Building or upgrade name
       cookiesRequired: price,
       cookiesPerSecond: rate,
       timeElapsed: timeBefore,
+      timeSinceLastStep: timeSinceLastStep,
       totalCookies: cookiesBefore,
       buildingCount: buildingCount // null for upgrades, number for buildings
     });
+    
+    // Update previousTimeElapsed for next iteration
+    previousTimeElapsed = timeBefore;
   }
   
 
