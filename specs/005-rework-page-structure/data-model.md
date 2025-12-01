@@ -145,3 +145,5 @@ Tracks which UI components should be initialized based on current PageState.
 - No new localStorage keys required - uses existing `cookieRouter:savedRoutes`
 - All state transitions are synchronous (no async operations)
 
+
+
