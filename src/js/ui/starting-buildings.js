@@ -10,7 +10,9 @@ export class StartingBuildingsSelector {
     this.startingBuildings = {};
     this.availableBuildings = [];
     this.currentVersion = null;
-    this.isCollapsed = true;
+    // Check if we're in wizard context - if so, always expanded
+    this.isInWizard = containerId && containerId.includes('wizard');
+    this.isCollapsed = !this.isInWizard; // Expanded in wizard, collapsed by default elsewhere
   }
 
   /**
@@ -41,13 +43,19 @@ export class StartingBuildingsSelector {
 
     this.container.innerHTML = `
       <div class="starting-buildings-container">
-        <div class="starting-buildings-header" id="starting-buildings-header">
-          <h3>Starting Buildings (Optional)</h3>
-          <button type="button" class="collapse-toggle" id="collapse-toggle" aria-label="Toggle starting buildings section" aria-expanded="${!this.isCollapsed}">
-            <span class="collapse-icon">${this.isCollapsed ? '▼' : '▲'}</span>
-          </button>
-        </div>
-        <div class="starting-buildings-content ${this.isCollapsed ? 'collapsed' : ''}" id="starting-buildings-content">
+        ${!this.isInWizard ? `
+          <div class="starting-buildings-header" id="starting-buildings-header">
+            <h3>Starting Buildings (Optional)</h3>
+            <button type="button" class="collapse-toggle" id="collapse-toggle" aria-label="Toggle starting buildings section" aria-expanded="${!this.isCollapsed}">
+              <span class="collapse-icon">${this.isCollapsed ? '▼' : '▲'}</span>
+            </button>
+          </div>
+        ` : `
+          <div class="starting-buildings-header" id="starting-buildings-header">
+            <h3>Starting Buildings (Optional)</h3>
+          </div>
+        `}
+        <div class="starting-buildings-content ${this.isInWizard ? '' : (this.isCollapsed ? 'collapsed' : '')}" id="starting-buildings-content">
           <p class="starting-buildings-description">
             Specify buildings you already own. The simulation will start from this state.
           </p>
@@ -91,23 +99,25 @@ export class StartingBuildingsSelector {
    * Attach event listeners
    */
   attachEventListeners() {
-    // Collapse toggle button
-    const toggleButton = this.container.querySelector('#collapse-toggle');
-    const header = this.container.querySelector('#starting-buildings-header');
-    if (toggleButton) {
-      toggleButton.addEventListener('click', () => {
-        this.toggleCollapse();
-      });
-    }
-    // Make header clickable
-    if (header) {
-      header.addEventListener('click', (e) => {
-        // Only toggle if clicking on header, not on the button itself (to avoid double toggle)
-        if (e.target === header || e.target.closest('h3')) {
+    // Collapse toggle button - only attach if not in wizard context
+    if (!this.isInWizard) {
+      const toggleButton = this.container.querySelector('#collapse-toggle');
+      const header = this.container.querySelector('#starting-buildings-header');
+      if (toggleButton) {
+        toggleButton.addEventListener('click', () => {
           this.toggleCollapse();
-        }
-      });
-      header.style.cursor = 'pointer';
+        });
+      }
+      // Make header clickable
+      if (header) {
+        header.addEventListener('click', (e) => {
+          // Only toggle if clicking on header, not on the button itself (to avoid double toggle)
+          if (e.target === header || e.target.closest('h3')) {
+            this.toggleCollapse();
+          }
+        });
+        header.style.cursor = 'pointer';
+      }
     }
 
     // Listen for input changes

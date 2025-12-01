@@ -4,24 +4,24 @@
  */
 
 import { RouteDisplay } from './js/ui/route-display.js';
-import { VersionSelector } from './js/ui/version-selector.js';
 import { SaveRouteDialog } from './js/ui/save-route-dialog.js';
 import { SavedRoutesList } from './js/ui/saved-routes-list.js';
 import { SaveGameImportDialog } from './js/ui/save-game-import-dialog.js';
 import { SaveGameDetailsView } from './js/ui/save-game-details-view.js';
+import { SaveGameDetailsDialog } from './js/ui/save-game-details-dialog.js';
 import { RouteCreationWizard } from './js/ui/route-creation-wizard.js';
 import { calculateRoute } from './js/simulation.js';
 import { getImportedSaveGame, getImportState } from './js/save-game-importer.js';
 import { getSavedRoutes } from './js/storage.js';
 
 // Initialize UI components (conditionally based on page state)
-const versionSelector = new VersionSelector('version-selector-header', handleVersionSelect);
 // CategorySelector, CustomCategoryForm, and StartingBuildingsSelector are only used in wizard, not in main.js
 let savedRoutesList = null; // Will be initialized conditionally based on page state
 const saveRouteDialog = new SaveRouteDialog('save-route-dialog-section', handleRouteSaved, handleSaveRouteCancel);
 const routeDisplay = new RouteDisplay('route-section', handleSaveRouteClick);
 const saveGameImportDialog = new SaveGameImportDialog('save-game-import-dialog-section', handleSaveGameImported, handleSaveGameCleared);
 const saveGameDetailsView = new SaveGameDetailsView('save-game-details-section');
+const saveGameDetailsDialog = new SaveGameDetailsDialog('save-game-details-dialog-section', handleCreateRouteFromSaveGame, handleSaveGameDetailsDialogClose);
 const routeCreationWizard = new RouteCreationWizard('route-creation-wizard-section', handleWizardComplete, handleWizardCancel);
 
 let isCalculating = false;
@@ -49,14 +49,6 @@ export function detectPageState() {
   }
 }
 
-/**
- * Handle version selection
- */
-async function handleVersionSelect(versionId) {
-  currentVersion = versionId;
-  // Note: startingBuildingsSelector and categorySelector are only in wizard now
-  // Version selection still works, but route recalculation happens in wizard context
-}
 
 /**
  * Handle starting buildings update
@@ -150,6 +142,12 @@ function handleSaveRouteCancel() {
  * Handle saved route selection
  */
 function handleSavedRouteSelect(savedRoute) {
+  // Show route section
+  const routeSection = document.getElementById('route-section');
+  if (routeSection) {
+    routeSection.style.display = '';
+  }
+  
   // Display the saved route
   routeDisplay.displayRoute(savedRoute, true); // true = isSavedRoute
 }
@@ -185,19 +183,41 @@ async function handleSaveGameImported(importedSaveGame) {
     currentStartingBuildings = importedSaveGame.buildingCounts;
   }
 
-  // Auto-select version if detected
+  // Update current version if detected
   if (importedSaveGame && importedSaveGame.version) {
-    versionSelector.selectVersion(importedSaveGame.version);
     currentVersion = importedSaveGame.version;
   }
 
-  // Refresh details view
-  if (saveGameDetailsView) {
-    saveGameDetailsView.refresh();
+  // Show save game details dialog instead of showing in main page
+  saveGameDetailsDialog.show();
+}
+
+/**
+ * Handle create route from save game (from details dialog)
+ */
+function handleCreateRouteFromSaveGame() {
+  const importedSaveGame = getImportedSaveGame();
+  if (!importedSaveGame) {
+    console.warn('No imported save game available');
+    return;
   }
 
-  // Update import status indicator
-  updateImportStatusIndicator();
+  // Open wizard at category selection step (step 1) with import data pre-populated
+  routeCreationWizard.show({
+    step1Data: {
+      setupChoice: 'import',
+      importedSaveGame: importedSaveGame,
+      manualBuildings: null,
+      versionId: importedSaveGame.version || null
+    }
+  }, 1); // Start at step 1 (category selection)
+}
+
+/**
+ * Handle save game details dialog close
+ */
+function handleSaveGameDetailsDialogClose() {
+  // Dialog was closed, nothing special needed
 }
 
 /**
@@ -207,13 +227,16 @@ function handleSaveGameCleared() {
   // Clear starting buildings
   currentStartingBuildings = {};
   
+  // Hide save game details section
+  const saveGameDetailsSection = document.getElementById('save-game-details-section');
+  if (saveGameDetailsSection) {
+    saveGameDetailsSection.style.display = 'none';
+  }
+  
   // Refresh details view
   if (saveGameDetailsView) {
     saveGameDetailsView.refresh();
   }
-  
-  // Update import status indicator
-  updateImportStatusIndicator();
 }
 
 /**
@@ -222,24 +245,40 @@ function handleSaveGameCleared() {
  */
 async function updatePageStateAfterRouteSave() {
   try {
-    const previousState = detectPageState();
-    const newState = detectPageState();
+    // Check current state after route save
+    const currentState = detectPageState();
     
-    // If state changed from first-time (no routes) to returning (has routes)
-    if (!previousState.hasSavedRoutes && newState.hasSavedRoutes) {
+    // Always remove welcome section if it exists (route was just created)
+    const welcomeSection = document.getElementById('welcome-section');
+    if (welcomeSection) {
+      welcomeSection.remove();
+    }
+    
+    // If we now have saved routes, ensure returning user UI is shown
+    if (currentState.hasSavedRoutes) {
       // Initialize saved routes list if not already initialized
       if (!savedRoutesList) {
         savedRoutesList = new SavedRoutesList('saved-routes-section', handleSavedRouteSelect);
         await savedRoutesList.init();
       }
       
-      // Remove first-time user UI and show returning user UI
-      const welcomeSection = document.getElementById('welcome-section');
-      if (welcomeSection) {
-        welcomeSection.remove();
+      // Show saved routes section
+      const savedRoutesSection = document.getElementById('saved-routes-section');
+      if (savedRoutesSection) {
+        savedRoutesSection.style.display = '';
       }
       
-      renderReturningUserUI();
+      // Check if returning user UI is already shown, if not, render it
+      const choiceSection = document.getElementById('route-choice-section');
+      if (!choiceSection) {
+        renderReturningUserUI();
+      }
+    }
+    
+    // Show route section since a route was just created
+    const routeSection = document.getElementById('route-section');
+    if (routeSection) {
+      routeSection.style.display = '';
     }
     
     // Refresh saved routes list to show the new route
@@ -275,17 +314,13 @@ async function handleWizardComplete(route, category, versionId) {
       saveGameDetailsView.refresh();
     }
     
-    // Update import status indicator
-    updateImportStatusIndicator();
-    
     // Update starting buildings if needed
     if (importedSaveGame.buildingCounts) {
       currentStartingBuildings = importedSaveGame.buildingCounts;
     }
     
-    // Auto-select version if detected
+    // Update current version if detected
     if (importedSaveGame.version) {
-      versionSelector.selectVersion(importedSaveGame.version);
       currentVersion = importedSaveGame.version;
     }
   }
@@ -308,38 +343,26 @@ function handleWizardCancel() {
 }
 
 /**
- * Update import status indicator in header
- */
-function updateImportStatusIndicator() {
-  const indicatorContainer = document.getElementById('import-status-indicator');
-  if (!indicatorContainer) return;
-
-  const importState = getImportState();
-  
-  if (importState.isLoaded) {
-    indicatorContainer.innerHTML = `
-      <span class="import-status-badge loaded" title="Save game imported">
-        <span class="status-icon">✓</span>
-        <span class="status-text">Imported</span>
-        ${importState.version ? `<span class="status-version">${importState.version}</span>` : ''}
-      </span>
-    `;
-  } else {
-    indicatorContainer.innerHTML = `
-      <span class="import-status-badge not-loaded" title="No save game imported">
-        <span class="status-icon">○</span>
-        <span class="status-text">Not Imported</span>
-      </span>
-    `;
-  }
-}
-
-/**
  * Render first-time user UI (no saved routes)
  */
 function renderFirstTimeUserUI() {
   const main = document.querySelector('main');
   if (!main) return;
+  
+  // Hide sections that don't serve a purpose for first-time users
+  const saveGameDetailsSection = document.getElementById('save-game-details-section');
+  const savedRoutesSection = document.getElementById('saved-routes-section');
+  const routeSection = document.getElementById('route-section');
+  
+  if (saveGameDetailsSection) {
+    saveGameDetailsSection.style.display = 'none';
+  }
+  if (savedRoutesSection) {
+    savedRoutesSection.style.display = 'none';
+  }
+  if (routeSection) {
+    routeSection.style.display = 'none';
+  }
   
   // Create welcome message and wizard prompt
   const welcomeSection = document.createElement('div');
@@ -374,6 +397,24 @@ function renderReturningUserUI() {
   const main = document.querySelector('main');
   if (!main) return;
   
+  // Show sections that are relevant for returning users
+  const savedRoutesSection = document.getElementById('saved-routes-section');
+  if (savedRoutesSection) {
+    savedRoutesSection.style.display = '';
+  }
+  
+  // Hide save game details section (details are now shown in dialog)
+  const saveGameDetailsSection = document.getElementById('save-game-details-section');
+  if (saveGameDetailsSection) {
+    saveGameDetailsSection.style.display = 'none';
+  }
+  
+  // Hide route section if no route is displayed
+  const routeSection = document.getElementById('route-section');
+  if (routeSection) {
+    routeSection.style.display = 'none';
+  }
+  
   // Create choice section
   const choiceSection = document.createElement('div');
   choiceSection.id = 'route-choice-section';
@@ -406,10 +447,10 @@ function renderReturningUserUI() {
   const loadExistingBtn = document.getElementById('load-existing-route-btn');
   if (loadExistingBtn) {
     loadExistingBtn.addEventListener('click', () => {
-      // Show saved routes list (it should already be initialized)
+      // Scroll to the saved routes section
       const savedRoutesSection = document.getElementById('saved-routes-section');
       if (savedRoutesSection) {
-        savedRoutesSection.scrollIntoView({ behavior: 'smooth' });
+        savedRoutesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     });
   }
@@ -419,9 +460,6 @@ async function init() {
   try {
     // Detect page state
     const pageState = detectPageState();
-    
-    // Always initialize version selector
-    await versionSelector.init();
     
     // Always initialize route display and wizard
     // (RouteDisplay and RouteCreationWizard are always needed)
@@ -455,18 +493,33 @@ async function init() {
       });
     }
 
-    // Initialize and update import status indicator
-    updateImportStatusIndicator();
-
     // Initialize save game details view
     if (saveGameDetailsView) {
       saveGameDetailsView.init();
     }
 
-    // Check if there's an imported save game and auto-populate
-    const importedSaveGame = getImportedSaveGame();
-    if (importedSaveGame) {
-      handleSaveGameImported(importedSaveGame);
+    // Hide save game details section (details are now shown in dialog)
+    const saveGameDetailsSection = document.getElementById('save-game-details-section');
+    if (saveGameDetailsSection) {
+      saveGameDetailsSection.style.display = 'none';
+    }
+    
+    // Hide route section if no route is displayed (for returning users)
+    // The route section will be shown when a route is loaded or created
+    if (pageState.hasSavedRoutes) {
+      // Use setTimeout to check after RouteDisplay might have rendered its empty state
+      setTimeout(() => {
+        const routeSection = document.getElementById('route-section');
+        if (routeSection) {
+          // Check if it only has the empty state message (no actual route content)
+          const hasEmptyState = routeSection.querySelector('.empty-state');
+          const hasRouteContent = routeSection.querySelector('.route-header') || 
+                                  routeSection.querySelector('.route-list');
+          if (hasEmptyState && !hasRouteContent) {
+            routeSection.style.display = 'none';
+          }
+        }
+      }, 100);
     }
     
     console.log('Cookie Clicker Building Order Simulator initialized');

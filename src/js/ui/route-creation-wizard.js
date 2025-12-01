@@ -50,26 +50,42 @@ export class RouteCreationWizard {
 
   /**
    * Show the wizard modal
+   * @param {Object} initialState - Optional initial state to pre-populate wizard
+   * @param {number} startStep - Optional step to start at (0 = Initial Setup, 1 = Category Selection, 2 = Summary)
    */
-  show() {
+  show(initialState = null, startStep = 0) {
     if (!this.container) {
       console.error('RouteCreationWizard: container not found');
       return;
     }
 
+    // Validate startStep
+    if (startStep < 0 || startStep > 2) {
+      console.warn('Invalid startStep, defaulting to 0');
+      startStep = 0;
+    }
+
+    // If starting at step 2, ensure step 1 data is valid
+    if (startStep >= 1 && initialState?.step1Data) {
+      // Ensure setupChoice is set if we're skipping step 1
+      if (!initialState.step1Data.setupChoice && initialState.step1Data.importedSaveGame) {
+        initialState.step1Data.setupChoice = 'import';
+      }
+    }
+
     // Reset state
     this.state = {
-      currentStep: 0,
+      currentStep: startStep,
       step1Data: {
-        setupChoice: null,
-        importedSaveGame: null,
-        manualBuildings: null,
-        versionId: null
+        setupChoice: initialState?.step1Data?.setupChoice || null,
+        importedSaveGame: initialState?.step1Data?.importedSaveGame || null,
+        manualBuildings: initialState?.step1Data?.manualBuildings || null,
+        versionId: initialState?.step1Data?.versionId || null
       },
       step2Data: {
-        categoryType: null,
-        selectedCategoryId: null,
-        categoryConfig: null
+        categoryType: initialState?.step2Data?.categoryType || null,
+        selectedCategoryId: initialState?.step2Data?.selectedCategoryId || null,
+        categoryConfig: initialState?.step2Data?.categoryConfig || null
       },
       validationErrors: {
         step1: [],
@@ -161,9 +177,17 @@ export class RouteCreationWizard {
 
     if (this.state.currentStep === 0) {
       // Step 1: Initial Setup
-      this.initialSetup = new WizardInitialSetup('temp-step-container', this.state.step1Data, (data) => {
-        this.updateStep1Data(data);
-      });
+      this.initialSetup = new WizardInitialSetup(
+        'temp-step-container',
+        this.state.step1Data,
+        (data) => {
+          this.updateStep1Data(data);
+        },
+        () => {
+          // Auto-advance callback: move to next step after successful import
+          this.nextStep();
+        }
+      );
       this.initialSetup.render();
       
       // Restore state when navigating back

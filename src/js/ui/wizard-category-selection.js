@@ -20,7 +20,6 @@ export class WizardCategorySelection {
     this.customCategoryForm = null;
     this.categorySelectorContainer = null;
     this.customFormContainer = null;
-    this.settingsAdjustmentContainer = null;
   }
 
   /**
@@ -37,24 +36,32 @@ export class WizardCategorySelection {
         <p class="step-description">Choose a predefined category or create a custom one:</p>
         
         <div class="category-options">
-          <label class="category-option ${categoryType === 'predefined' ? 'selected' : ''}">
-            <input type="radio" name="category-type" value="predefined" ${categoryType === 'predefined' ? 'checked' : ''}>
-            <div class="option-content">
-              <strong>Predefined Category</strong>
-              <p>Select from existing speedrun categories</p>
+          <div class="category-option-wrapper ${categoryType === 'predefined' ? 'expanded' : ''}" data-option="predefined">
+            <label class="category-option ${categoryType === 'predefined' ? 'selected' : ''}">
+              <input type="radio" name="category-type" value="predefined" ${categoryType === 'predefined' ? 'checked' : ''}>
+              <div class="option-content">
+                <strong>Predefined Category</strong>
+                <p>Select from existing speedrun categories</p>
+              </div>
+            </label>
+            <div class="category-option-content" id="category-content-predefined" style="display: ${categoryType === 'predefined' ? 'block' : 'none'};">
+              <!-- Content will be inserted here -->
             </div>
-          </label>
+          </div>
           
-          <label class="category-option ${categoryType === 'custom' ? 'selected' : ''}">
-            <input type="radio" name="category-type" value="custom" ${categoryType === 'custom' ? 'checked' : ''}>
-            <div class="option-content">
-              <strong>Custom Category</strong>
-              <p>Create a custom category with your own settings</p>
+          <div class="category-option-wrapper ${categoryType === 'custom' ? 'expanded' : ''}" data-option="custom">
+            <label class="category-option ${categoryType === 'custom' ? 'selected' : ''}">
+              <input type="radio" name="category-type" value="custom" ${categoryType === 'custom' ? 'checked' : ''}>
+              <div class="option-content">
+                <strong>Custom Category</strong>
+                <p>Create a custom category with your own settings</p>
+              </div>
+            </label>
+            <div class="category-option-content" id="category-content-custom" style="display: ${categoryType === 'custom' ? 'block' : 'none'};">
+              <!-- Content will be inserted here -->
             </div>
-          </label>
+          </div>
         </div>
-
-        <div class="category-content" id="category-content-area"></div>
         
         <div class="error-message" id="step2-error" role="alert" aria-live="polite" style="display: none;"></div>
       </div>
@@ -74,22 +81,90 @@ export class WizardCategorySelection {
         this.handleTypeChange(e.target.value);
       });
     });
+
+    // Add click handlers to labels to allow collapsing when clicking already selected option
+    const optionLabels = this.container.querySelectorAll('.category-option');
+    optionLabels.forEach(label => {
+      label.addEventListener('click', (e) => {
+        // Don't handle if clicking on the radio button itself (it will trigger change event)
+        if (e.target.type === 'radio') {
+          return;
+        }
+        
+        const radio = label.querySelector('input[type="radio"]');
+        if (!radio) return;
+        
+        const optionValue = radio.value;
+        
+        // If this option is already selected, deselect it
+        if (this.state.categoryType === optionValue) {
+          e.preventDefault();
+          e.stopPropagation();
+          // Uncheck the radio button
+          radio.checked = false;
+          // Clear the selection
+          this.handleTypeChange(null);
+        }
+        // Otherwise, let the default behavior select it
+      });
+    });
   }
 
   /**
    * Handle category type change
-   * @param {string} type - Selected type ('predefined' or 'custom')
+   * @param {string|null} type - Selected type ('predefined', 'custom', or null to deselect)
    */
   async handleTypeChange(type) {
     this.state.categoryType = type;
-    // Clear previous selection when switching types
-    if (type === 'predefined') {
-      this.state.selectedCategoryId = null;
-      this.state.categoryConfig = null;
-    } else if (type === 'custom') {
+    
+    // Uncheck all radio buttons first
+    const allRadios = this.container.querySelectorAll('input[name="category-type"]');
+    allRadios.forEach(radio => {
+      radio.checked = false;
+    });
+    
+    // Update selected state for all options
+    const allOptions = this.container.querySelectorAll('.category-option');
+    allOptions.forEach(option => {
+      option.classList.remove('selected');
+    });
+    
+    // Update expanded state for all wrappers
+    const allWrappers = this.container.querySelectorAll('.category-option-wrapper');
+    allWrappers.forEach(wrapper => {
+      wrapper.classList.remove('expanded');
+    });
+    
+    if (type) {
+      // Check the selected radio button
+      const selectedRadio = this.container.querySelector(`input[name="category-type"][value="${type}"]`);
+      if (selectedRadio) {
+        selectedRadio.checked = true;
+      }
+      
+      const selectedWrapper = this.container.querySelector(`[data-option="${type}"]`);
+      if (selectedWrapper) {
+        const selectedOption = selectedWrapper.querySelector('.category-option');
+        if (selectedOption) {
+          selectedOption.classList.add('selected');
+        }
+        selectedWrapper.classList.add('expanded');
+      }
+      
+      // Clear previous selection when switching types
+      if (type === 'predefined') {
+        this.state.selectedCategoryId = null;
+        this.state.categoryConfig = null;
+      } else if (type === 'custom') {
+        this.state.selectedCategoryId = null;
+        this.state.categoryConfig = null;
+      }
+    } else {
+      // Deselecting - clear all category data
       this.state.selectedCategoryId = null;
       this.state.categoryConfig = null;
     }
+    
     await this.updateContent();
     this.notifyUpdate();
   }
@@ -98,55 +173,78 @@ export class WizardCategorySelection {
    * Update content area based on selected type
    */
   async updateContent() {
-    const contentArea = this.container.querySelector('#category-content-area');
-    if (!contentArea) return;
-
     const { categoryType, selectedCategoryId } = this.state;
 
+    // Get all option wrappers and content areas using data attributes
+    const predefinedWrapper = this.container.querySelector('[data-option="predefined"]');
+    const customWrapper = this.container.querySelector('[data-option="custom"]');
+    
+    const predefinedContent = this.container.querySelector('#category-content-predefined');
+    const customContent = this.container.querySelector('#category-content-custom');
+
+    // Update expanded state for all wrappers
+    [predefinedWrapper, customWrapper].forEach(wrapper => {
+      if (wrapper) {
+        wrapper.classList.remove('expanded');
+      }
+    });
+
     // Clear previous content and destroy existing components
-    contentArea.innerHTML = '';
+    if (predefinedContent) predefinedContent.innerHTML = '';
+    if (customContent) customContent.innerHTML = '';
+    
     this.categorySelector = null;
     this.customCategoryForm = null;
 
     if (categoryType === 'predefined') {
+      // Expand predefined option
+      if (predefinedWrapper) predefinedWrapper.classList.add('expanded');
+      if (predefinedContent) predefinedContent.style.display = 'block';
+
       // Create container for category selector
       this.categorySelectorContainer = document.createElement('div');
       this.categorySelectorContainer.id = 'wizard-category-selector-container';
-      contentArea.appendChild(this.categorySelectorContainer);
+      if (predefinedContent) {
+        predefinedContent.appendChild(this.categorySelectorContainer);
+      }
 
       // Create CategorySelector instance
+      // Hide create button since custom categories are handled in the wizard's second collapsible
       this.categorySelector = new CategorySelector(
         'wizard-category-selector-container',
         (category) => {
           this.handleCategorySelected(category);
+        },
+        {
+          showCreateButton: false, // Hide create button in wizard context
+          onSettingsChange: (category) => {
+            // Update category config when settings are changed in expanded view
+            this.handleCategorySelected(category);
+          }
         }
       );
 
       // Initialize category selector
       await this.categorySelector.init();
 
-      // Create container for settings adjustment
-      this.settingsAdjustmentContainer = document.createElement('div');
-      this.settingsAdjustmentContainer.id = 'wizard-category-settings';
-      this.settingsAdjustmentContainer.style.display = 'none';
-      contentArea.appendChild(this.settingsAdjustmentContainer);
-
       // Restore selected category if navigating back
       // Use setTimeout to ensure categorySelector is fully initialized
       setTimeout(() => {
         if (selectedCategoryId && this.categorySelector) {
           this.categorySelector.selectCategory(selectedCategoryId);
-          const category = this.categorySelector.getSelectedCategory();
-          if (category) {
-            this.showCategorySettings(category);
-          }
         }
       }, 100);
     } else if (categoryType === 'custom') {
+      // Expand custom option
+      if (customWrapper) customWrapper.classList.add('expanded');
+      if (customContent) customContent.style.display = 'block';
+
       // Create container for custom category form
       this.customFormContainer = document.createElement('div');
       this.customFormContainer.id = 'wizard-custom-category-container';
-      contentArea.appendChild(this.customFormContainer);
+      if (customContent) {
+        customContent.appendChild(this.customFormContainer);
+      }
 
       // Create CustomCategoryForm instance
       this.customCategoryForm = new CustomCategoryForm(
@@ -167,6 +265,10 @@ export class WizardCategorySelection {
         // Form will need to be populated with existing config
         // This will be handled by the form's state restoration
       }
+    } else {
+      // No option selected - collapse all
+      if (predefinedContent) predefinedContent.style.display = 'none';
+      if (customContent) customContent.style.display = 'none';
     }
   }
 
@@ -178,14 +280,13 @@ export class WizardCategorySelection {
     if (!category) {
       this.state.selectedCategoryId = null;
       this.state.categoryConfig = null;
-      this.hideCategorySettings();
       this.notifyUpdate();
       return;
     }
 
     this.state.selectedCategoryId = category.id;
     
-    // Create category config from predefined category
+    // Create category config from predefined category (or updated category with custom settings)
     this.state.categoryConfig = {
       name: category.name,
       version: category.version || 'v2052',
@@ -196,120 +297,8 @@ export class WizardCategorySelection {
       initialBuildings: category.initialBuildings || {}
     };
 
-    this.showCategorySettings(category);
+    // Settings are now handled inline in the expanded category item
     this.notifyUpdate();
-  }
-
-  /**
-   * Show category settings adjustment UI
-   * @param {Object} category - Category to show settings for
-   */
-  showCategorySettings(category) {
-    if (!this.settingsAdjustmentContainer) return;
-
-    this.settingsAdjustmentContainer.style.display = 'block';
-    this.settingsAdjustmentContainer.innerHTML = `
-      <div class="category-settings-adjustment">
-        <h3>Adjust Category Settings (Optional)</h3>
-        <p class="info-text">You can modify these settings before calculating the route.</p>
-        
-        <div class="form-group">
-          <label for="wizard-target-cookies">Target Cookies:</label>
-          <input 
-            type="number" 
-            id="wizard-target-cookies" 
-            min="1" 
-            value="${category.targetCookies || 1000000}"
-            class="form-input"
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="wizard-player-cps">Player CPS:</label>
-          <input 
-            type="number" 
-            id="wizard-player-cps" 
-            min="0" 
-            step="0.1"
-            value="${category.playerCps || 8}"
-            class="form-input"
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="wizard-player-delay">Player Delay (seconds):</label>
-          <input 
-            type="number" 
-            id="wizard-player-delay" 
-            min="0" 
-            step="0.1"
-            value="${category.playerDelay || 1}"
-            class="form-input"
-          >
-        </div>
-
-        <div class="form-group">
-          <label>
-            <input 
-              type="checkbox" 
-              id="wizard-hardcore-mode" 
-              ${category.hardcoreMode ? 'checked' : ''}
-            >
-            Hardcore Mode (no upgrades)
-          </label>
-        </div>
-      </div>
-    `;
-
-    // Attach event listeners for settings changes
-    this.attachSettingsListeners();
-  }
-
-  /**
-   * Attach event listeners for settings adjustment
-   */
-  attachSettingsListeners() {
-    if (!this.settingsAdjustmentContainer) return;
-
-    const targetCookiesInput = this.settingsAdjustmentContainer.querySelector('#wizard-target-cookies');
-    const playerCpsInput = this.settingsAdjustmentContainer.querySelector('#wizard-player-cps');
-    const playerDelayInput = this.settingsAdjustmentContainer.querySelector('#wizard-player-delay');
-    const hardcoreModeInput = this.settingsAdjustmentContainer.querySelector('#wizard-hardcore-mode');
-
-    const updateConfig = () => {
-      if (this.state.categoryConfig) {
-        this.state.categoryConfig.targetCookies = parseFloat(targetCookiesInput.value) || this.state.categoryConfig.targetCookies;
-        this.state.categoryConfig.playerCps = parseFloat(playerCpsInput.value) || this.state.categoryConfig.playerCps;
-        this.state.categoryConfig.playerDelay = parseFloat(playerDelayInput.value) || this.state.categoryConfig.playerDelay;
-        this.state.categoryConfig.hardcoreMode = hardcoreModeInput.checked;
-        this.notifyUpdate();
-      }
-    };
-
-    if (targetCookiesInput) {
-      targetCookiesInput.addEventListener('change', updateConfig);
-      targetCookiesInput.addEventListener('input', updateConfig);
-    }
-    if (playerCpsInput) {
-      playerCpsInput.addEventListener('change', updateConfig);
-      playerCpsInput.addEventListener('input', updateConfig);
-    }
-    if (playerDelayInput) {
-      playerDelayInput.addEventListener('change', updateConfig);
-      playerDelayInput.addEventListener('input', updateConfig);
-    }
-    if (hardcoreModeInput) {
-      hardcoreModeInput.addEventListener('change', updateConfig);
-    }
-  }
-
-  /**
-   * Hide category settings adjustment UI
-   */
-  hideCategorySettings() {
-    if (this.settingsAdjustmentContainer) {
-      this.settingsAdjustmentContainer.style.display = 'none';
-    }
   }
 
   /**
@@ -358,10 +347,6 @@ export class WizardCategorySelection {
     // Restore component states if they exist
     if (newState.categoryType === 'predefined' && this.categorySelector && newState.selectedCategoryId) {
       this.categorySelector.selectCategory(newState.selectedCategoryId);
-      const category = this.categorySelector.getSelectedCategory();
-      if (category) {
-        this.showCategorySettings(category);
-      }
     } else if (newState.categoryType === 'custom' && this.customCategoryForm && newState.categoryConfig) {
       // Custom form will need to be populated - this may require form modifications
     }
@@ -412,45 +397,16 @@ export class WizardCategorySelection {
    * Highlight invalid fields
    */
   highlightInvalidFields() {
-    if (!this.settingsAdjustmentContainer) return;
-    
-    const errors = this.state.validationErrors.step2 || [];
-    
-    // Highlight target cookies if invalid
-    if (errors.some(e => e.includes('Target cookies'))) {
-      const input = this.settingsAdjustmentContainer.querySelector('#wizard-target-cookies');
-      if (input) {
-        input.classList.add('error-field');
-      }
-    }
-    
-    // Highlight player CPS if invalid
-    if (errors.some(e => e.includes('Player CPS'))) {
-      const input = this.settingsAdjustmentContainer.querySelector('#wizard-player-cps');
-      if (input) {
-        input.classList.add('error-field');
-      }
-    }
-    
-    // Highlight player delay if invalid
-    if (errors.some(e => e.includes('Player delay'))) {
-      const input = this.settingsAdjustmentContainer.querySelector('#wizard-player-delay');
-      if (input) {
-        input.classList.add('error-field');
-      }
-    }
+    // Field highlighting is now handled in the CategorySelector component
+    // This method is kept for compatibility but does nothing
   }
 
   /**
    * Clear field highlights
    */
   clearFieldHighlights() {
-    if (!this.settingsAdjustmentContainer) return;
-    
-    const inputs = this.settingsAdjustmentContainer.querySelectorAll('.error-field');
-    inputs.forEach(input => {
-      input.classList.remove('error-field');
-    });
+    // Field highlighting is now handled in the CategorySelector component
+    // This method is kept for compatibility but does nothing
   }
 }
 
