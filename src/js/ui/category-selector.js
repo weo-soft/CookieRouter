@@ -6,6 +6,7 @@
 import { getCategories, deleteCategory } from '../storage.js';
 import { short, fledgling, neverclick, hardcore } from '../categories.js';
 import { formatNumber as formatNumberUtil } from '../utils/format.js';
+import { renderNumberInputWithMultiplier, getNumberInputWithMultiplierValue } from '../utils/number-input.js';
 
 export class CategorySelector {
   constructor(containerId, onSelect, options = {}) {
@@ -280,54 +281,52 @@ export class CategorySelector {
           <p class="info-text">Adjust these settings before calculating the route.</p>
         </div>
         <div class="category-settings-form">
-          <div class="form-group">
-            <label for="category-target-cookies-${category.id}">Target Cookies:</label>
-            <input 
-              type="number" 
-              id="category-target-cookies-${category.id}" 
-              min="1" 
-              value="${category.targetCookies || 1000000}"
-              class="form-input"
-              data-setting="targetCookies"
-            >
-          </div>
+          ${renderNumberInputWithMultiplier(
+            `category-target-cookies-${category.id}`,
+            `category-target-cookies-multiplier-${category.id}`,
+            category.targetCookies || 1000000,
+            'Target Cookies:',
+            null
+          )}
 
-          <div class="form-group">
-            <label for="category-player-cps-${category.id}">Player CPS:</label>
-            <input 
-              type="number" 
-              id="category-player-cps-${category.id}" 
-              min="0" 
-              step="0.1"
-              value="${category.playerCps || 8}"
-              class="form-input"
-              data-setting="playerCps"
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="category-player-delay-${category.id}">Player Delay (seconds):</label>
-            <input 
-              type="number" 
-              id="category-player-delay-${category.id}" 
-              min="0" 
-              step="0.1"
-              value="${category.playerDelay || 1}"
-              class="form-input"
-              data-setting="playerDelay"
-            >
-          </div>
-
-          <div class="form-group">
-            <label>
+          <div class="category-settings-form-row">
+            <div class="form-group">
+              <label for="category-player-cps-${category.id}">Player CPS:</label>
               <input 
-                type="checkbox" 
-                id="category-hardcore-mode-${category.id}" 
-                ${category.hardcoreMode ? 'checked' : ''}
-                data-setting="hardcoreMode"
+                type="number" 
+                id="category-player-cps-${category.id}" 
+                min="0" 
+                step="0.1"
+                value="${category.playerCps || 8}"
+                class="form-input"
+                data-setting="playerCps"
               >
-              Hardcore Mode (no upgrades)
-            </label>
+            </div>
+
+            <div class="form-group">
+              <label for="category-player-delay-${category.id}">Player Delay (seconds):</label>
+              <input 
+                type="number" 
+                id="category-player-delay-${category.id}" 
+                min="0" 
+                step="0.1"
+                value="${category.playerDelay || 1}"
+                class="form-input"
+                data-setting="playerDelay"
+              >
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input 
+                  type="checkbox" 
+                  id="category-hardcore-mode-${category.id}" 
+                  ${category.hardcoreMode ? 'checked' : ''}
+                  data-setting="hardcoreMode"
+                >
+                Hardcore Mode (no upgrades)
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -344,14 +343,19 @@ export class CategorySelector {
     if (!category) return;
 
     const targetCookiesInput = this.container.querySelector(`#category-target-cookies-${category.id}`);
+    const targetCookiesMultiplier = this.container.querySelector(`#category-target-cookies-multiplier-${category.id}`);
     const playerCpsInput = this.container.querySelector(`#category-player-cps-${category.id}`);
     const playerDelayInput = this.container.querySelector(`#category-player-delay-${category.id}`);
     const hardcoreModeInput = this.container.querySelector(`#category-hardcore-mode-${category.id}`);
 
     const updateSettings = () => {
+      const targetCookies = targetCookiesInput && targetCookiesMultiplier
+        ? getNumberInputWithMultiplierValue(`category-target-cookies-${category.id}`, `category-target-cookies-multiplier-${category.id}`)
+        : (parseFloat(targetCookiesInput?.value) || category.targetCookies);
+      
       const updatedCategory = {
         ...category,
-        targetCookies: parseFloat(targetCookiesInput?.value) || category.targetCookies,
+        targetCookies: targetCookies,
         playerCps: parseFloat(playerCpsInput?.value) || category.playerCps,
         playerDelay: parseFloat(playerDelayInput?.value) || category.playerDelay,
         hardcoreMode: hardcoreModeInput?.checked || false
@@ -382,6 +386,9 @@ export class CategorySelector {
     if (targetCookiesInput) {
       targetCookiesInput.addEventListener('change', updateSettings);
       targetCookiesInput.addEventListener('input', updateSettings);
+    }
+    if (targetCookiesMultiplier) {
+      targetCookiesMultiplier.addEventListener('change', updateSettings);
     }
     if (playerCpsInput) {
       playerCpsInput.addEventListener('change', updateSettings);

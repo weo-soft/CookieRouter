@@ -12,6 +12,10 @@ import { getImportedSaveGame } from './save-game-importer.js';
  * @param {Object} category - Category configuration
  * @param {Object} startingBuildings - Optional map of building names to counts already owned (manual override)
  * @param {Object} options - Optional simulation options
+ *   - algorithm: 'GPL' or 'DFS' (default: 'GPL')
+ *   - lookahead: number (default: 1)
+ *   - onProgress: function
+ *   - manualUpgrades: Array of upgrade names already purchased
  * @param {string} versionId - Game version ID (default: 'v2052', can be overridden by imported save)
  * @returns {Promise<Object>} Route object with metadata about imported data usage
  */
@@ -106,6 +110,38 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     if (category.initialBuildings) {
       for (const [buildingName, count] of Object.entries(category.initialBuildings)) {
         game.numBuildings[buildingName] = count;
+      }
+    }
+  }
+
+  // Apply purchased upgrades from imported save and manual setup
+  let purchasedUpgrades = [];
+  if (importedSaveGame && importedSaveGame.upgrades) {
+    purchasedUpgrades = [...importedSaveGame.upgrades];
+  }
+  // Manual upgrades take precedence (override imported)
+  if (options.manualUpgrades && Array.isArray(options.manualUpgrades)) {
+    purchasedUpgrades = [...options.manualUpgrades];
+  }
+  
+  // Apply purchased upgrades to the game
+  if (purchasedUpgrades.length > 0) {
+    const upgradeMap = new Map();
+    for (const upgrade of version.menu) {
+      upgradeMap.set(upgrade.name, upgrade);
+    }
+    
+    for (const upgradeName of purchasedUpgrades) {
+      const upgrade = upgradeMap.get(upgradeName);
+      if (upgrade && game.hasSatisfied(upgrade.req)) {
+        // Remove from menu
+        game.menu.delete(upgrade);
+        // Apply effects
+        for (const buildingName in upgrade.effects) {
+          game.effects[buildingName].push(upgrade.effects[buildingName]);
+        }
+        // Add to history
+        game.history.push(upgrade.name);
       }
     }
   }

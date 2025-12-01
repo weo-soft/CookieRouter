@@ -8,7 +8,7 @@ import { CustomCategoryForm } from './custom-category-form.js';
 import { getCategories } from '../storage.js';
 
 export class WizardCategorySelection {
-  constructor(containerId, initialState = null, onUpdate = null) {
+  constructor(containerId, initialState = null, onUpdate = null, onAutoAdvance = null) {
     this.container = document.getElementById(containerId);
     this.state = initialState || {
       categoryType: null,
@@ -16,6 +16,7 @@ export class WizardCategorySelection {
       categoryConfig: null
     };
     this.onUpdate = onUpdate;
+    this.onAutoAdvance = onAutoAdvance;
     this.categorySelector = null;
     this.customCategoryForm = null;
     this.categorySelectorContainer = null;
@@ -317,6 +318,13 @@ export class WizardCategorySelection {
       initialBuildings: category.initialBuildings || {}
     };
     this.notifyUpdate();
+    
+    // Auto-advance to next step after a short delay
+    if (this.onAutoAdvance) {
+      setTimeout(() => {
+        this.onAutoAdvance();
+      }, 500);
+    }
   }
 
   /**

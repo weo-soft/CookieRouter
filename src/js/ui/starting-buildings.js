@@ -8,8 +8,12 @@ export class StartingBuildingsSelector {
     this.container = document.getElementById(containerId);
     this.onUpdate = onUpdate;
     this.startingBuildings = {};
+    this.purchasedUpgrades = new Set(); // Track purchased upgrades
     this.availableBuildings = [];
+    this.availableUpgrades = []; // Array of upgrade objects
+    this.upgradesByBuilding = new Map(); // Map building name to array of upgrades
     this.currentVersion = null;
+    this.currentUpgradeDialog = null; // Currently open upgrade dialog
     // Check if we're in wizard context - if so, always expanded
     this.isInWizard = containerId && containerId.includes('wizard');
     this.isCollapsed = !this.isInWizard; // Expanded in wizard, collapsed by default elsewhere
@@ -21,16 +25,105 @@ export class StartingBuildingsSelector {
    */
   async init(versionId = 'v2052') {
     try {
-      // Dynamically import the version to get building names
+      // Dynamically import the version to get building names and upgrades
       const versionModules = await import(`../../data/versions/${versionId}.js`);
       const version = versionModules.default;
       this.currentVersion = version;
       this.availableBuildings = version.buildingNames || [];
+      
+      // Extract upgrade objects from the menu Set and organize by building
+      this.availableUpgrades = [];
+      this.upgradesByBuilding = new Map();
+      
+      // Initialize map for all buildings
+      for (const buildingName of this.availableBuildings) {
+        this.upgradesByBuilding.set(buildingName, []);
+      }
+      
+      if (version.menu && version.menu instanceof Set) {
+        for (const upgrade of version.menu) {
+          this.availableUpgrades.push(upgrade);
+          
+          // Organize upgrades by which buildings they affect
+          // An upgrade can affect multiple buildings, so add it to all relevant building lists
+          if (upgrade.effects) {
+            const affectedBuildings = new Set();
+            
+            for (const buildingName in upgrade.effects) {
+              // Map 'mouse' upgrades to 'Cursor' building
+              if (buildingName === 'mouse' && this.availableBuildings.includes('Cursor')) {
+                affectedBuildings.add('Cursor');
+              } else if (buildingName === 'all') {
+                // Global upgrades - show in Cursor building dialog as a catch-all
+                if (this.availableBuildings.includes('Cursor')) {
+                  affectedBuildings.add('Cursor');
+                }
+              } else if (this.upgradesByBuilding.has(buildingName)) {
+                affectedBuildings.add(buildingName);
+              }
+            }
+            
+            // If upgrade affects at least one building, add it to those building lists
+            if (affectedBuildings.size > 0) {
+              for (const buildingName of affectedBuildings) {
+                this.upgradesByBuilding.get(buildingName).push(upgrade);
+              }
+            } else if (this.availableBuildings.includes('Cursor')) {
+              // Fallback: assign to Cursor if no specific building found
+              this.upgradesByBuilding.get('Cursor').push(upgrade);
+            }
+          }
+        }
+      } else if (Array.isArray(version.menu)) {
+        for (const upgrade of version.menu) {
+          this.availableUpgrades.push(upgrade);
+          
+          // Organize upgrades by which buildings they affect
+          // An upgrade can affect multiple buildings, so add it to all relevant building lists
+          if (upgrade.effects) {
+            const affectedBuildings = new Set();
+            
+            for (const buildingName in upgrade.effects) {
+              // Map 'mouse' upgrades to 'Cursor' building
+              if (buildingName === 'mouse' && this.availableBuildings.includes('Cursor')) {
+                affectedBuildings.add('Cursor');
+              } else if (buildingName === 'all') {
+                // Global upgrades - show in Cursor building dialog as a catch-all
+                if (this.availableBuildings.includes('Cursor')) {
+                  affectedBuildings.add('Cursor');
+                }
+              } else if (this.upgradesByBuilding.has(buildingName)) {
+                affectedBuildings.add(buildingName);
+              }
+            }
+            
+            // If upgrade affects at least one building, add it to those building lists
+            if (affectedBuildings.size > 0) {
+              for (const buildingName of affectedBuildings) {
+                this.upgradesByBuilding.get(buildingName).push(upgrade);
+              }
+            } else if (this.availableBuildings.includes('Cursor')) {
+              // Fallback: assign to Cursor if no specific building found
+              this.upgradesByBuilding.get('Cursor').push(upgrade);
+            }
+          }
+        }
+      }
+      
+      // Remove duplicates and sort upgrades by name for each building
+      for (const [buildingName, upgrades] of this.upgradesByBuilding.entries()) {
+        // Remove duplicates (upgrades might be added multiple times)
+        const uniqueUpgrades = Array.from(new Map(upgrades.map(upg => [upg.name, upg])).values());
+        this.upgradesByBuilding.set(buildingName, uniqueUpgrades);
+        uniqueUpgrades.sort((a, b) => a.name.localeCompare(b.name));
+      }
+      
       this.render();
     } catch (error) {
       console.error('Error loading version for starting buildings:', error);
       // Fallback to empty list
       this.availableBuildings = [];
+      this.availableUpgrades = [];
       this.render();
     }
   }
@@ -57,14 +150,22 @@ export class StartingBuildingsSelector {
         `}
         <div class="starting-buildings-content ${this.isInWizard ? '' : (this.isCollapsed ? 'collapsed' : '')}" id="starting-buildings-content">
           <p class="starting-buildings-description">
-            Specify buildings you already own. The simulation will start from this state.
+            Specify buildings you already own. Click the ⚙️ button next to each building to select upgrades. The simulation will start from this state.
           </p>
-          <div class="starting-buildings-grid" id="starting-buildings-grid">
-            ${this.availableBuildings.map(building => this.renderBuildingInput(building)).join('')}
+          
+          <div class="starting-buildings-section">
+            <h4 class="section-title">Buildings</h4>
+            <div class="starting-buildings-grid" id="starting-buildings-grid">
+              ${this.availableBuildings.map(building => this.renderBuildingInput(building)).join('')}
+            </div>
           </div>
+          
           <div class="starting-buildings-actions">
-            <button type="button" class="btn-clear" id="clear-starting-buildings">Clear All</button>
+            <button type="button" class="btn-clear" id="clear-starting-buildings">Clear All Buildings</button>
+            <button type="button" class="btn-clear" id="clear-starting-upgrades">Clear All Upgrades</button>
           </div>
+          
+          <div id="building-upgrades-dialog-container"></div>
         </div>
       </div>
     `;
@@ -77,6 +178,10 @@ export class StartingBuildingsSelector {
    */
   renderBuildingInput(buildingName) {
     const count = this.startingBuildings[buildingName] || 0;
+    const upgradesForBuilding = this.upgradesByBuilding.get(buildingName) || [];
+    const purchasedCount = upgradesForBuilding.filter(upg => this.purchasedUpgrades.has(upg.name)).length;
+    const hasUpgrades = upgradesForBuilding.length > 0;
+    
     return `
       <div class="building-input-group" data-building="${this.escapeHtml(buildingName)}">
         <label for="building-${this.sanitizeId(buildingName)}" class="building-label">
@@ -91,8 +196,127 @@ export class StartingBuildingsSelector {
           data-building="${this.escapeHtml(buildingName)}"
           aria-label="Number of ${this.escapeHtml(buildingName)} owned"
         >
+        ${hasUpgrades ? `
+          <button
+            type="button"
+            class="btn-upgrades"
+            data-building="${this.escapeHtml(buildingName)}"
+            aria-label="Select upgrades for ${this.escapeHtml(buildingName)}"
+            title="Select upgrades (${purchasedCount}/${upgradesForBuilding.length})"
+          >
+            ⚙️
+            ${purchasedCount > 0 ? `<span class="upgrade-count-badge">${purchasedCount}</span>` : ''}
+          </button>
+        ` : ''}
       </div>
     `;
+  }
+
+  /**
+   * Show upgrade selection dialog for a building
+   */
+  showUpgradeDialog(buildingName) {
+    const upgrades = this.upgradesByBuilding.get(buildingName) || [];
+    if (upgrades.length === 0) {
+      return; // No upgrades for this building
+    }
+
+    const dialogContainer = this.container.querySelector('#building-upgrades-dialog-container');
+    if (!dialogContainer) return;
+
+    // Create dialog HTML
+    const dialogId = `upgrade-dialog-${this.sanitizeId(buildingName)}`;
+    dialogContainer.innerHTML = `
+      <div class="building-upgrades-dialog-overlay" id="${dialogId}-overlay">
+        <div class="building-upgrades-dialog">
+          <div class="dialog-header">
+            <h3>Upgrades for ${this.escapeHtml(buildingName)}</h3>
+            <button type="button" class="dialog-close-btn" aria-label="Close dialog">&times;</button>
+          </div>
+          <div class="dialog-content">
+            <div class="upgrades-list">
+              ${upgrades.map(upgrade => {
+                const isChecked = this.purchasedUpgrades.has(upgrade.name);
+                return `
+                  <label class="upgrade-checkbox-label">
+                    <input
+                      type="checkbox"
+                      class="upgrade-checkbox"
+                      data-upgrade="${this.escapeHtml(upgrade.name)}"
+                      ${isChecked ? 'checked' : ''}
+                    >
+                    <span class="upgrade-name">${this.escapeHtml(upgrade.name)}</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <div class="dialog-footer">
+            <button type="button" class="btn-primary" id="${dialogId}-save">Save</button>
+            <button type="button" class="btn-secondary" id="${dialogId}-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Attach event listeners
+    const overlay = dialogContainer.querySelector(`#${dialogId}-overlay`);
+    const closeBtn = dialogContainer.querySelector('.dialog-close-btn');
+    const cancelBtn = dialogContainer.querySelector(`#${dialogId}-cancel`);
+    const saveBtn = dialogContainer.querySelector(`#${dialogId}-save`);
+    const checkboxes = dialogContainer.querySelectorAll('.upgrade-checkbox');
+
+    const closeDialog = () => {
+      dialogContainer.innerHTML = '';
+      this.currentUpgradeDialog = null;
+    };
+
+    closeBtn?.addEventListener('click', closeDialog);
+    cancelBtn?.addEventListener('click', closeDialog);
+    
+    overlay?.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeDialog();
+      }
+    });
+
+    saveBtn?.addEventListener('click', () => {
+      // Update purchased upgrades for this building
+      const buildingUpgrades = upgrades.map(upg => upg.name);
+      
+      // Remove all upgrades for this building first
+      for (const upgradeName of buildingUpgrades) {
+        this.purchasedUpgrades.delete(upgradeName);
+      }
+      
+      // Add selected upgrades
+      checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          this.purchasedUpgrades.add(checkbox.dataset.upgrade);
+        }
+      });
+      
+      // Notify parent component
+      if (this.onUpdate) {
+        this.onUpdate(this.getStartingBuildings(), this.getPurchasedUpgrades());
+      }
+      
+      // Re-render to update button badge
+      this.render();
+      
+      closeDialog();
+    });
+
+    // Handle Escape key
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        closeDialog();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    this.currentUpgradeDialog = buildingName;
   }
 
   /**
@@ -131,11 +355,29 @@ export class StartingBuildingsSelector {
       });
     });
 
-    // Clear all button
-    const clearButton = this.container.querySelector('#clear-starting-buildings');
-    if (clearButton) {
-      clearButton.addEventListener('click', () => {
-        this.clearAll();
+    // Listen for upgrade button clicks
+    const upgradeButtons = this.container.querySelectorAll('.btn-upgrades');
+    upgradeButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const buildingName = button.dataset.building;
+        this.showUpgradeDialog(buildingName);
+      });
+    });
+
+    // Clear all buildings button
+    const clearBuildingsButton = this.container.querySelector('#clear-starting-buildings');
+    if (clearBuildingsButton) {
+      clearBuildingsButton.addEventListener('click', () => {
+        this.clearAllBuildings();
+      });
+    }
+
+    // Clear all upgrades button
+    const clearUpgradesButton = this.container.querySelector('#clear-starting-upgrades');
+    if (clearUpgradesButton) {
+      clearUpgradesButton.addEventListener('click', () => {
+        this.clearAllUpgrades();
       });
     }
   }
@@ -169,14 +411,15 @@ export class StartingBuildingsSelector {
 
     // Notify parent component
     if (this.onUpdate) {
-      this.onUpdate(this.getStartingBuildings());
+      this.onUpdate(this.getStartingBuildings(), this.getPurchasedUpgrades());
     }
   }
+
 
   /**
    * Clear all starting buildings
    */
-  clearAll() {
+  clearAllBuildings() {
     this.startingBuildings = {};
     const inputs = this.container.querySelectorAll('.building-count-input');
     inputs.forEach(input => {
@@ -184,9 +427,23 @@ export class StartingBuildingsSelector {
     });
 
     if (this.onUpdate) {
-      this.onUpdate(this.getStartingBuildings());
+      this.onUpdate(this.getStartingBuildings(), this.getPurchasedUpgrades());
     }
   }
+
+  /**
+   * Clear all purchased upgrades
+   */
+  clearAllUpgrades() {
+    this.purchasedUpgrades.clear();
+    // Re-render to update upgrade button badges
+    this.render();
+
+    if (this.onUpdate) {
+      this.onUpdate(this.getStartingBuildings(), this.getPurchasedUpgrades());
+    }
+  }
+
 
   /**
    * Get current starting buildings
@@ -203,6 +460,24 @@ export class StartingBuildingsSelector {
    */
   setStartingBuildings(buildings) {
     this.startingBuildings = { ...buildings };
+    this.render();
+  }
+
+  /**
+   * Get current purchased upgrades
+   * @returns {Array} Array of upgrade names
+   */
+  getPurchasedUpgrades() {
+    // Return an array copy
+    return Array.from(this.purchasedUpgrades);
+  }
+
+  /**
+   * Set purchased upgrades
+   * @param {Array} upgrades - Array of upgrade names
+   */
+  setPurchasedUpgrades(upgrades) {
+    this.purchasedUpgrades = new Set(upgrades || []);
     this.render();
   }
 

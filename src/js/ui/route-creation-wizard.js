@@ -80,6 +80,7 @@ export class RouteCreationWizard {
         setupChoice: initialState?.step1Data?.setupChoice || null,
         importedSaveGame: initialState?.step1Data?.importedSaveGame || null,
         manualBuildings: initialState?.step1Data?.manualBuildings || null,
+        manualUpgrades: initialState?.step1Data?.manualUpgrades || null,
         versionId: initialState?.step1Data?.versionId || null
       },
       step2Data: {
@@ -196,9 +197,17 @@ export class RouteCreationWizard {
       }
     } else if (this.state.currentStep === 1) {
       // Step 2: Category Selection
-      this.categorySelection = new WizardCategorySelection('temp-step-container', this.state.step2Data, (data) => {
-        this.updateStep2Data(data);
-      });
+      this.categorySelection = new WizardCategorySelection(
+        'temp-step-container',
+        this.state.step2Data,
+        (data) => {
+          this.updateStep2Data(data);
+        },
+        () => {
+          // Auto-advance callback: move to next step after successful category creation
+          this.nextStep();
+        }
+      );
       this.categorySelection.render();
       
       // Restore state when navigating back
@@ -535,11 +544,22 @@ export class RouteCreationWizard {
         }
       };
 
+      // Collect purchased upgrades
+      let purchasedUpgrades = [];
+      if (this.state.step1Data.importedSaveGame?.upgrades) {
+        purchasedUpgrades = [...this.state.step1Data.importedSaveGame.upgrades];
+      }
+      // Manual upgrades take precedence
+      if (this.state.step1Data.manualUpgrades && Array.isArray(this.state.step1Data.manualUpgrades)) {
+        purchasedUpgrades = [...this.state.step1Data.manualUpgrades];
+      }
+
       // Calculate route
       const route = await calculateRoute(config.category, startingBuildings, {
         algorithm: 'GPL',
         lookahead: 1,
-        onProgress: onProgress
+        onProgress: onProgress,
+        manualUpgrades: purchasedUpgrades
       }, versionId);
 
       // Store calculated route

@@ -14,6 +14,7 @@ export class WizardInitialSetup {
       setupChoice: null,
       importedSaveGame: null,
       manualBuildings: null,
+      manualUpgrades: null,
       versionId: null
     };
     this.onUpdate = onUpdate;
@@ -260,8 +261,8 @@ export class WizardInitialSetup {
       // Create StartingBuildingsSelector instance
       this.startingBuildingsSelector = new StartingBuildingsSelector(
         'wizard-manual-setup-container',
-        (buildings) => {
-          this.handleManualBuildingsUpdate(buildings);
+        (buildings, upgrades) => {
+          this.handleManualBuildingsUpdate(buildings, upgrades);
         }
       );
 
@@ -272,6 +273,11 @@ export class WizardInitialSetup {
       // Restore manual buildings if they exist
       if (this.state.manualBuildings) {
         this.startingBuildingsSelector.setStartingBuildings(this.state.manualBuildings);
+      }
+
+      // Restore manual upgrades if they exist
+      if (this.state.manualUpgrades) {
+        this.startingBuildingsSelector.setPurchasedUpgrades(this.state.manualUpgrades);
       }
     } else if (setupChoice === 'fresh') {
       // Expand fresh option
@@ -322,11 +328,13 @@ export class WizardInitialSetup {
   }
 
   /**
-   * Handle manual buildings update
+   * Handle manual buildings and upgrades update
    * @param {Object} buildings - Building counts
+   * @param {Array} upgrades - Array of purchased upgrade names
    */
-  handleManualBuildingsUpdate(buildings) {
+  handleManualBuildingsUpdate(buildings, upgrades = []) {
     this.state.manualBuildings = buildings;
+    this.state.manualUpgrades = upgrades;
     this.notifyUpdate();
   }
 
