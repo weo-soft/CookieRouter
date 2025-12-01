@@ -98,6 +98,7 @@ export class Router {
     const gameRate = game.rate(); // Calculate this once to save computer power
     let bestChild = null;
     let bestPl = null;
+    let bestPrice = null;
     
     let childCount = 0;
     let validChildCount = 0;
@@ -106,6 +107,7 @@ export class Router {
     for (const child of game.children()) {
       childCount++;
       let bestDescendantPl = null;
+      let bestDescendantPrice = null;
       let descendantCountForChild = 0;
       
       for (const descendant of this.descendants(child, generation - 1)) {
@@ -122,15 +124,37 @@ export class Router {
         // Record the best descendant of this 'child'
         if (bestDescendantPl === null || payoffLoad < bestDescendantPl) {
           bestDescendantPl = payoffLoad;
+          bestDescendantPrice = price;
         }
       }
       // If there were no descendants just move on to the next child
       if (bestDescendantPl === null) continue;
       validChildCount++;
-      // Record the child with the best descendant
-      if (bestPl === null || bestDescendantPl < bestPl) {
+      
+      // Prefer significantly cheaper purchases when payoff loads are similar
+      // This helps avoid skipping over affordable purchases in favor of expensive ones
+      // If new purchase is 10x+ cheaper and payoff load is within 15% of best, prefer it
+      let shouldSelect = false;
+      if (bestPl === null) {
+        // First valid purchase found
+        shouldSelect = true;
+      } else if (bestDescendantPl < bestPl) {
+        // Better payoff load
+        shouldSelect = true;
+      } else if (bestPrice !== null && bestDescendantPrice !== null) {
+        // Check if significantly cheaper with acceptable payoff load
+        const priceRatio = bestPrice / bestDescendantPrice;
+        const payoffRatio = bestDescendantPl / bestPl;
+        // Prefer if 10x+ cheaper and payoff load is within 15% of best
+        if (priceRatio >= 10 && payoffRatio <= 1.15) {
+          shouldSelect = true;
+        }
+      }
+      
+      if (shouldSelect) {
         bestChild = child;
         bestPl = bestDescendantPl;
+        bestPrice = bestDescendantPrice;
       }
     }
     

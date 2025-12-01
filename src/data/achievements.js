@@ -79,3 +79,47 @@ export function getAchievementsByIds(achievementIds) {
     .map(id => getAchievementById(id))
     .filter(achievement => achievement !== undefined);
 }
+
+/**
+ * Gets the routeable requirement for an achievement
+ * @param {number} id - Achievement ID
+ * @returns {Promise<Object|null>} Promise resolving to requirement object or null if not found/not routeable
+ */
+export async function getAchievementRequirement(id) {
+  try {
+    const { getAchievementRequirement: getReq } = await import('./achievement-requirements.js');
+    return getReq(id);
+  } catch (error) {
+    console.warn('Failed to load achievement requirements:', error);
+    return null;
+  }
+}
+
+/**
+ * Checks if an achievement is routeable
+ * @param {number} id - Achievement ID
+ * @returns {Promise<boolean>} Promise resolving to true if achievement is routeable
+ */
+export async function isAchievementRouteable(id) {
+  try {
+    const { isAchievementRouteable: isRouteable } = await import('./achievement-requirements.js');
+    return isRouteable(id);
+  } catch (error) {
+    console.warn('Failed to check achievement routeability:', error);
+    return false;
+  }
+}
+
+/**
+ * Gets all routeable achievement IDs
+ * @returns {Promise<number[]>} Promise resolving to array of routeable achievement IDs
+ */
+export async function getRouteableAchievementIds() {
+  try {
+    const { getRouteableAchievementIds: getRouteable } = await import('./achievement-requirements.js');
+    return getRouteable();
+  } catch (error) {
+    console.warn('Failed to get routeable achievements:', error);
+    return [];
+  }
+}

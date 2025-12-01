@@ -185,8 +185,8 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   for (let i = 0; i < result.history.length; i++) {
     const item = result.history[i];
     
-    const rate = stepGame.rate();
-    const timeBefore = stepGame.timeElapsed;
+    // Capture rate and cookies before purchase
+    const rateBefore = stepGame.rate();
     const cookiesBefore = stepGame.totalCookies;
     let price;
     
@@ -217,22 +217,30 @@ export async function calculateRoute(category, startingBuildings = {}, options =
       }
     }
     
-    // Calculate time since last step
-    const timeSinceLastStep = timeBefore - previousTimeElapsed;
+    // Capture rate and time after purchase (purchaseBuilding/purchaseUpgrade updates these)
+    const rateAfter = stepGame.rate();
+    const timeAfter = stepGame.timeElapsed;
+    
+    // Calculate time since last step (time it took to save up for this purchase)
+    const timeSinceLastStep = timeAfter - previousTimeElapsed;
+    
+    // Calculate CpS increase
+    const cpsIncrease = rateAfter - rateBefore;
     
     routeBuildings.push({
       order: i + 1,
       buildingName: item, // Building or upgrade name
       cookiesRequired: price,
-      cookiesPerSecond: rate,
-      timeElapsed: timeBefore,
+      cookiesPerSecond: rateAfter,
+      cpsIncrease: cpsIncrease,
+      timeElapsed: timeAfter,
       timeSinceLastStep: timeSinceLastStep,
       totalCookies: cookiesBefore,
       buildingCount: buildingCount // null for upgrades, number for buildings
     });
     
     // Update previousTimeElapsed for next iteration
-    previousTimeElapsed = timeBefore;
+    previousTimeElapsed = timeAfter;
   }
   
 

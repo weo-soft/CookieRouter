@@ -194,7 +194,7 @@ export class RouteDisplay {
                   <span class="step-separator">•</span>
                   <span class="step-detail">Cookies: ${formatNumber(step.cookiesRequired)}</span>
                   <span class="step-separator">•</span>
-                  <span class="step-detail">CpS: ${formatNumber(step.cookiesPerSecond)}</span>
+                  <span class="step-detail">CpS: ${formatNumber(step.cookiesPerSecond)}${step.cpsIncrease !== undefined && step.cpsIncrease > 0 ? ` (+${formatNumber(step.cpsIncrease)})` : ''}</span>
                   <span class="step-separator">•</span>
                   <span class="step-detail">Time: ${this.formatTime(step.timeElapsed)}</span>
                   ${step.timeSinceLastStep !== undefined ? `
