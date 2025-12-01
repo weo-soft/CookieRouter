@@ -96,7 +96,7 @@ async function _handleCategorySelect(category) {
     }, currentVersion);
 
     // Display route
-    routeDisplay.displayRoute(route);
+    await routeDisplay.displayRoute(route);
     // Update category and version for save functionality
     routeDisplay.setCategoryAndVersion(category, currentVersion);
   } catch (error) {
@@ -141,7 +141,7 @@ function handleSaveRouteCancel() {
 /**
  * Handle saved route selection
  */
-function handleSavedRouteSelect(savedRoute) {
+async function handleSavedRouteSelect(savedRoute) {
   // Show route section
   const routeSection = document.getElementById('route-section');
   if (routeSection) {
@@ -149,7 +149,7 @@ function handleSavedRouteSelect(savedRoute) {
   }
   
   // Display the saved route
-  routeDisplay.displayRoute(savedRoute, true); // true = isSavedRoute
+  await routeDisplay.displayRoute(savedRoute, true); // true = isSavedRoute
 }
 
 /**
@@ -304,7 +304,7 @@ async function handleWizardComplete(route, category, versionId) {
   }
   
   // Display the calculated route
-  routeDisplay.displayRoute(route);
+  await routeDisplay.displayRoute(route);
   
   // Check if a save game was imported during the wizard and make it available
   const importedSaveGame = getImportedSaveGame();

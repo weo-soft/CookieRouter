@@ -14,6 +14,8 @@ export class RouteDisplay {
     this.currentCategory = null;
     this.currentVersionId = null;
     this.onSaveRoute = onSaveRoute; // Callback when save route is clicked
+    this.tooltipElement = null; // Shared tooltip element
+    this.buildingOrder = null; // Building order from version data
   }
 
   /**
@@ -21,9 +23,55 @@ export class RouteDisplay {
    * @param {Object} category - Current category
    * @param {string} versionId - Current version ID
    */
-  setCategoryAndVersion(category, versionId) {
+  async setCategoryAndVersion(category, versionId) {
     this.currentCategory = category;
     this.currentVersionId = versionId;
+    // Load building order from version data
+    await this.loadBuildingOrder(versionId);
+  }
+
+  /**
+   * Load building order from version data
+   * @param {string} versionId - Version ID
+   */
+  async loadBuildingOrder(versionId) {
+    if (!versionId) {
+      versionId = this.currentVersionId || 'v2052';
+    }
+    
+    try {
+      const versionModules = await import(`../../data/versions/${versionId}.js`);
+      const version = versionModules.default;
+      this.buildingOrder = version.buildingNames || [];
+    } catch (error) {
+      console.warn(`Failed to load building order for ${versionId}, using default`, error);
+      // Fallback to a default order if loading fails
+      this.buildingOrder = ['Cursor', 'Grandma', 'Farm', 'Mine', 'Factory', 'Bank', 'Temple', 'Wizard tower', 'Shipment', 'Alchemy lab', 'Portal', 'Time machine', 'Antimatter condenser', 'Prism', 'Chancemaker', 'Fractal engine', 'Javascript console', 'Idleverse', 'Cortex baker', 'You'];
+    }
+  }
+
+  /**
+   * Sort buildings by game order
+   * @param {Array} buildingEntries - Array of [buildingName, count] tuples
+   * @returns {Array} Sorted array
+   */
+  sortBuildingsByOrder(buildingEntries) {
+    if (!this.buildingOrder || this.buildingOrder.length === 0) {
+      // Fallback to alphabetical if no order available
+      return buildingEntries.sort(([a], [b]) => a.localeCompare(b));
+    }
+    
+    // Create a map of building name to index for fast lookup
+    const orderMap = new Map();
+    this.buildingOrder.forEach((name, index) => {
+      orderMap.set(name, index);
+    });
+    
+    return buildingEntries.sort(([a], [b]) => {
+      const indexA = orderMap.get(a) ?? Infinity;
+      const indexB = orderMap.get(b) ?? Infinity;
+      return indexA - indexB;
+    });
   }
 
   /**
@@ -31,7 +79,7 @@ export class RouteDisplay {
    * @param {Object} route - Route object (calculated) or SavedRoute object
    * @param {boolean} isSavedRoute - Whether this is a saved route
    */
-  displayRoute(route, isSavedRoute = false) {
+  async displayRoute(route, isSavedRoute = false) {
     if (!route) {
       this.currentRoute = null;
       this.progress = null;
@@ -43,6 +91,7 @@ export class RouteDisplay {
     this.isSavedRoute = isSavedRoute;
 
     // For saved routes, use routeData and savedRouteId
+    let versionId = null;
     if (isSavedRoute) {
       // Convert saved route to display format
       this.currentRoute = {
@@ -53,6 +102,16 @@ export class RouteDisplay {
         lookahead: route.routeData.lookahead || 1,
         startingBuildings: route.routeData.startingBuildings || {}
       };
+      versionId = route.versionId;
+    } else {
+      versionId = route.versionId || this.currentVersionId;
+    }
+
+    // Load building order for the route's version
+    if (versionId) {
+      await this.loadBuildingOrder(versionId);
+    } else if (this.currentVersionId) {
+      await this.loadBuildingOrder(this.currentVersionId);
     }
 
     // Get progress using route ID (works for both calculated and saved routes)
@@ -112,6 +171,7 @@ export class RouteDisplay {
           <span class="progress-text">${completedCount} / ${totalCount} completed</span>
         </div>
       </div>
+      ${this.renderRouteSummary()}
       <div class="route-list" role="list">
         ${buildings.map((step, index) => {
           const isCompleted = this.progress.completedBuildings.includes(step.order);
@@ -149,6 +209,13 @@ export class RouteDisplay {
                 aria-label="Check all previous steps up to step ${step.order}"
                 title="Check all previous steps">
                 ✓ All
+              </button>
+              <button 
+                class="step-info-icon" 
+                data-step-order="${step.order}"
+                aria-label="Show summary up to step ${step.order}"
+                title="Show summary">
+                ℹ
               </button>
             </div>
           `;
@@ -196,6 +263,9 @@ export class RouteDisplay {
         }
       });
     }
+
+    // Attach tooltip event listeners
+    this.attachTooltipListeners();
 
     // Restore scroll position after rendering
     if (savedScrollTop > 0) {
@@ -461,6 +531,246 @@ export class RouteDisplay {
     
     // Show days and hours
     return `${days}d ${hours.toFixed(2)}h`;
+  }
+
+  /**
+   * Attach tooltip event listeners to info icons
+   */
+  attachTooltipListeners() {
+    const infoIcons = this.container.querySelectorAll('.step-info-icon');
+
+    // Create tooltip element if it doesn't exist
+    if (!this.tooltipElement) {
+      this.tooltipElement = document.createElement('div');
+      this.tooltipElement.className = 'route-step-tooltip';
+      this.tooltipElement.style.display = 'none';
+      document.body.appendChild(this.tooltipElement);
+    }
+
+    infoIcons.forEach(iconElement => {
+      const stepOrder = parseInt(iconElement.getAttribute('data-step-order'));
+      if (isNaN(stepOrder)) return;
+
+      const showTooltip = (e) => {
+        if (!this.tooltipElement || !this.currentRoute) return;
+        
+        // Calculate summary for this step
+        const summary = this.calculateSummaryUpToStep(stepOrder);
+        const tooltipContent = this.formatSummaryTooltip(summary);
+        this.tooltipElement.innerHTML = tooltipContent;
+        this.tooltipElement.style.display = 'block';
+        
+        // Force reflow to get accurate dimensions
+        this.tooltipElement.offsetHeight;
+        
+        // Position tooltip at mouse location
+        const updateTooltipPosition = (mouseEvent) => {
+          if (!this.tooltipElement) return;
+          
+          const tooltipRect = this.tooltipElement.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+          
+          // Get mouse coordinates
+          let mouseX = mouseEvent.clientX + scrollLeft;
+          let mouseY = mouseEvent.clientY + scrollTop;
+          
+          // Offset tooltip slightly from cursor
+          const offsetX = 15;
+          const offsetY = 15;
+          
+          let left = mouseX + offsetX;
+          let top = mouseY + offsetY;
+          
+          // Adjust if tooltip would go off screen
+          if (left + tooltipRect.width > window.innerWidth + scrollLeft - 10) {
+            left = mouseX - tooltipRect.width - offsetX;
+          }
+          if (top + tooltipRect.height > window.innerHeight + scrollTop - 10) {
+            top = mouseY - tooltipRect.height - offsetY;
+          }
+          if (left < scrollLeft + 10) {
+            left = scrollLeft + 10;
+          }
+          if (top < scrollTop + 10) {
+            top = scrollTop + 10;
+          }
+          
+          this.tooltipElement.style.top = `${top}px`;
+          this.tooltipElement.style.left = `${left}px`;
+        };
+        
+        // Initial position
+        updateTooltipPosition(e);
+        
+        // Update position as mouse moves
+        const mouseMoveHandler = (moveEvent) => {
+          updateTooltipPosition(moveEvent);
+        };
+        
+        iconElement.addEventListener('mousemove', mouseMoveHandler);
+        
+        // Store handler for cleanup
+        iconElement._tooltipMouseMoveHandler = mouseMoveHandler;
+      };
+
+      const hideTooltip = () => {
+        if (this.tooltipElement) {
+          this.tooltipElement.style.display = 'none';
+        }
+        // Remove mousemove handler
+        if (iconElement._tooltipMouseMoveHandler) {
+          iconElement.removeEventListener('mousemove', iconElement._tooltipMouseMoveHandler);
+          delete iconElement._tooltipMouseMoveHandler;
+        }
+      };
+
+      iconElement.addEventListener('mouseenter', showTooltip);
+      iconElement.addEventListener('mouseleave', hideTooltip);
+      iconElement.addEventListener('focus', showTooltip);
+      iconElement.addEventListener('blur', hideTooltip);
+    });
+  }
+
+  /**
+   * Calculate summary of buildings and upgrades up to a given step
+   * @param {number} stepOrder - Step order to calculate summary up to (inclusive)
+   * @returns {Object} Summary object with buildings and upgrades
+   */
+  calculateSummaryUpToStep(stepOrder) {
+    if (!this.currentRoute || !this.currentRoute.buildings) {
+      return { buildings: {}, upgrades: [] };
+    }
+
+    const buildings = { ...(this.currentRoute.startingBuildings || {}) };
+    const upgrades = [];
+
+    // Process all steps up to and including stepOrder
+    for (const step of this.currentRoute.buildings) {
+      if (step.order > stepOrder) {
+        break;
+      }
+
+      // Check if it's a building (has buildingCount) or upgrade (no buildingCount)
+      if (step.buildingCount !== null && step.buildingCount !== undefined) {
+        // It's a building
+        const buildingName = step.buildingName;
+        buildings[buildingName] = (buildings[buildingName] || 0) + 1;
+      } else {
+        // It's an upgrade
+        upgrades.push(step.buildingName);
+      }
+    }
+
+    return { buildings, upgrades };
+  }
+
+  /**
+   * Render the permanent route summary section
+   * @returns {string} HTML string for the summary section
+   */
+  renderRouteSummary() {
+    if (!this.currentRoute || !this.currentRoute.buildings || this.currentRoute.buildings.length === 0) {
+      return '';
+    }
+
+    // Calculate final summary (up to the last step)
+    const finalStepOrder = this.currentRoute.buildings.length;
+    const summary = this.calculateSummaryUpToStep(finalStepOrder);
+    
+    return this.formatSummaryDisplay(summary);
+  }
+
+  /**
+   * Format summary as HTML for permanent display
+   * @param {Object} summary - Summary object with buildings and upgrades
+   * @returns {string} HTML string for the summary section
+   */
+  formatSummaryDisplay(summary) {
+    const { buildings, upgrades } = summary;
+    
+    let html = '<div class="route-summary-section">';
+    html += '<h3 class="route-summary-title">Route Summary</h3>';
+    html += '<div class="route-summary-content">';
+    
+    // Buildings section - sort by game order
+    const buildingEntries = Object.entries(buildings)
+      .filter(([_, count]) => count > 0);
+    const sortedBuildingEntries = this.sortBuildingsByOrder(buildingEntries);
+    
+    if (sortedBuildingEntries.length > 0) {
+      html += '<div class="summary-section-buildings">';
+      html += '<h4 class="summary-section-title">Buildings</h4>';
+      html += '<div class="summary-buildings-grid">';
+      for (const [buildingName, count] of sortedBuildingEntries) {
+        html += `<div class="summary-building-item">`;
+        html += `<span class="summary-building-name">${this.escapeHtml(buildingName)}</span>`;
+        html += `<span class="summary-building-count">${count}</span>`;
+        html += `</div>`;
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+    
+    // Upgrades section
+    if (upgrades.length > 0) {
+      html += '<div class="summary-section-upgrades">';
+      html += '<h4 class="summary-section-title">Upgrades</h4>';
+      html += '<div class="summary-upgrades-list">';
+      for (const upgradeName of upgrades.sort()) {
+        html += `<div class="summary-upgrade-item">${this.escapeHtml(upgradeName)}</div>`;
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+    
+    if (sortedBuildingEntries.length === 0 && upgrades.length === 0) {
+      html += '<div class="summary-empty">No buildings or upgrades in this route</div>';
+    }
+    
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * Format summary as HTML for tooltip
+   * @param {Object} summary - Summary object with buildings and upgrades
+   * @returns {string} HTML string for tooltip
+   */
+  formatSummaryTooltip(summary) {
+    const { buildings, upgrades } = summary;
+    
+    let html = '<div class="route-summary-tooltip">';
+    
+    // Buildings section - sort by game order
+    const buildingEntries = Object.entries(buildings)
+      .filter(([_, count]) => count > 0);
+    const sortedBuildingEntries = this.sortBuildingsByOrder(buildingEntries);
+    
+    if (sortedBuildingEntries.length > 0) {
+      html += '<div class="summary-section"><strong>Buildings:</strong><ul class="summary-list">';
+      for (const [buildingName, count] of sortedBuildingEntries) {
+        html += `<li>${this.escapeHtml(buildingName)}: ${count}</li>`;
+      }
+      html += '</ul></div>';
+    }
+    
+    // Upgrades section
+    if (upgrades.length > 0) {
+      html += '<div class="summary-section"><strong>Upgrades:</strong><ul class="summary-list">';
+      for (const upgradeName of upgrades.sort()) {
+        html += `<li>${this.escapeHtml(upgradeName)}</li>`;
+      }
+      html += '</ul></div>';
+    }
+    
+    if (sortedBuildingEntries.length === 0 && upgrades.length === 0) {
+      html += '<div class="summary-empty">No buildings or upgrades yet</div>';
+    }
+    
+    html += '</div>';
+    return html;
   }
 
   /**

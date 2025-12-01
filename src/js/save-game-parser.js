@@ -445,7 +445,7 @@ export async function extractUpgrades(decodedSave, versionId) {
  * Extracts achievements from bitfield section 7
  * @param {string} decodedSave - Decoded save string
  * @param {string} versionId - Game version ID
- * @returns {Promise<string[]>} Promise resolving to array of unlocked achievement names
+ * @returns {Promise<Array<{id: number, name: string, description: string}>>} Promise resolving to array of unlocked achievement objects
  */
 export async function extractAchievements(decodedSave, versionId) {
   const sections = parseSections(decodedSave);
@@ -457,15 +457,47 @@ export async function extractAchievements(decodedSave, versionId) {
   
   const achievementsBitfield = sections[7];
   
-  // Note: Achievement names would need to be loaded from version data or a separate list
-  // For now, we'll return the bit positions that are set
-  // In a full implementation, you'd map these to achievement names
+  // Load achievement mapping
+  let getAchievementById;
+  try {
+    const achievementsModule = await import('../data/achievements.js');
+    getAchievementById = achievementsModule.getAchievementById;
+  } catch (error) {
+    console.warn('Failed to load achievement mapping:', error);
+    // Fallback: return indices if mapping fails
+    const unlockedAchievements = [];
+    for (let i = 0; i < achievementsBitfield.length; i++) {
+      if (achievementsBitfield[i] === '1') {
+        unlockedAchievements.push({ id: i, name: `Achievement ${i}`, description: 'Unknown achievement' });
+      }
+    }
+    return unlockedAchievements;
+  }
+  
   const unlockedAchievements = [];
   
+  // Parse bitfield and map to achievement objects
   for (let i = 0; i < achievementsBitfield.length; i++) {
     if (achievementsBitfield[i] === '1') {
-      // Store as index for now - would need achievement name mapping
-      unlockedAchievements.push(i);
+      const achievement = getAchievementById(i);
+      if (achievement) {
+        unlockedAchievements.push({
+          id: achievement.id,
+          name: achievement.name,
+          description: achievement.description,
+          category: achievement.category,
+          type: achievement.type
+        });
+      } else {
+        // Achievement ID not found in mapping - include with fallback name
+        unlockedAchievements.push({
+          id: i,
+          name: `Achievement ${i}`,
+          description: 'Unknown achievement (ID not in mapping)',
+          category: 'unknown',
+          type: 'normal'
+        });
+      }
     }
   }
   

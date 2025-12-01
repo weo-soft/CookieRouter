@@ -221,12 +221,32 @@ export class SaveGameDetailsView {
       return '<div class="save-game-achievements"><h4>Achievements</h4><p>No achievements unlocked.</p></div>';
     }
 
+    // Handle both old format (array of indices) and new format (array of objects)
+    const achievements = importedSaveGame.achievements.map(achievement => {
+      if (typeof achievement === 'number') {
+        // Old format: just an index
+        return { id: achievement, name: `Achievement ${achievement}`, description: 'Unknown achievement' };
+      }
+      // New format: achievement object
+      return achievement;
+    });
+
+    const achievementItems = achievements.map(achievement => {
+      const typeClass = achievement.type === 'shadow' ? 'achievement-shadow' : '';
+      return `
+        <div class="achievement-item ${typeClass}">
+          <div class="achievement-name">${this.escapeHtml(achievement.name)}</div>
+          <div class="achievement-description">${this.escapeHtml(achievement.description)}</div>
+          ${achievement.type === 'shadow' ? '<span class="achievement-badge shadow">Shadow</span>' : ''}
+        </div>
+      `;
+    }).join('');
+
     return `
       <div class="save-game-achievements">
-        <h4>Unlocked Achievements (${importedSaveGame.achievements.length})</h4>
+        <h4>Unlocked Achievements (${achievements.length})</h4>
         <div class="achievements-list">
-          <p class="achievements-note">Achievement indices: ${importedSaveGame.achievements.join(', ')}</p>
-          <p class="achievements-note"><em>Note: Achievement names require additional mapping data.</em></p>
+          ${achievementItems}
         </div>
       </div>
     `;
