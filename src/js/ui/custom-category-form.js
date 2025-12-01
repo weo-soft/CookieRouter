@@ -4,6 +4,7 @@
  */
 
 import { saveCategory, getCategories } from '../storage.js';
+import { renderNumberInputWithMultiplier, getNumberInputWithMultiplierValue } from '../utils/number-input.js';
 
 export class CustomCategoryForm {
   constructor(containerId, onSave, onCancel) {
@@ -70,7 +71,24 @@ export class CustomCategoryForm {
 
     this.container.innerHTML = `
       <div class="custom-category-form-container">
-        <h3>${this.editingCategory ? 'Edit Category' : 'Create Custom Category'}</h3>
+        <div class="custom-category-form-header">
+          <h3>${this.editingCategory ? 'Edit Category' : 'Create Custom Category'}</h3>
+          <div class="form-group form-group-inline">
+            <label for="category-version">Game Version *</label>
+            <select
+              id="category-version"
+              name="version"
+              required
+              aria-required="true"
+            >
+              ${this.availableVersions.map(v => `
+                <option value="${v.id}" ${v.id === category.version ? 'selected' : ''}>
+                  ${v.name}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
         <form id="custom-category-form" class="custom-category-form">
           <div class="form-group">
             <label for="category-name">Category Name *</label>
@@ -87,37 +105,13 @@ export class CustomCategoryForm {
             <span id="name-error" class="error-message" role="alert"></span>
           </div>
 
-          <div class="form-group">
-            <label for="category-version">Game Version *</label>
-            <select
-              id="category-version"
-              name="version"
-              required
-              aria-required="true"
-            >
-              ${this.availableVersions.map(v => `
-                <option value="${v.id}" ${v.id === category.version ? 'selected' : ''}>
-                  ${v.name}
-                </option>
-              `).join('')}
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="target-cookies">Target Cookies *</label>
-            <input
-              type="number"
-              id="target-cookies"
-              name="targetCookies"
-              required
-              min="1"
-              step="1"
-              value="${category.targetCookies}"
-              aria-required="true"
-              aria-describedby="target-error"
-            >
-            <span id="target-error" class="error-message" role="alert"></span>
-          </div>
+          ${renderNumberInputWithMultiplier(
+            'target-cookies',
+            'target-cookies-multiplier',
+            category.targetCookies,
+            'Target Cookies *',
+            'target-error'
+          )}
 
           <div class="form-row">
             <div class="form-group">
@@ -147,18 +141,18 @@ export class CustomCategoryForm {
               >
               <span id="delay-help" class="help-text">Default: 1</span>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input
-                type="checkbox"
-                id="hardcore-mode"
-                name="hardcoreMode"
-                ${category.hardcoreMode ? 'checked' : ''}
-              >
-              <span>Hardcore Mode (disable upgrades)</span>
-            </label>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  id="hardcore-mode"
+                  name="hardcoreMode"
+                  ${category.hardcoreMode ? 'checked' : ''}
+                >
+                <span>Hardcore Mode (disable upgrades)</span>
+              </label>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -217,11 +211,20 @@ export class CustomCategoryForm {
     const form = this.container.querySelector('#custom-category-form');
     if (!form) return;
 
+    // Validate number input before getting value
+    const targetCookiesInput = document.getElementById('target-cookies');
+    if (!targetCookiesInput || !targetCookiesInput.value || parseFloat(targetCookiesInput.value) <= 0) {
+      this.showValidationErrors({ target: 'Target cookies must be greater than 0.' });
+      return;
+    }
+
     const formData = new FormData(form);
+    // Get version from select element (it's outside the form in the header)
+    const versionSelect = document.getElementById('category-version');
     const categoryData = {
       name: formData.get('name').trim(),
-      version: formData.get('version'),
-      targetCookies: parseFloat(formData.get('targetCookies')),
+      version: versionSelect ? versionSelect.value : formData.get('version'),
+      targetCookies: getNumberInputWithMultiplierValue('target-cookies', 'target-cookies-multiplier'),
       playerCps: parseFloat(formData.get('playerCps')) || 8,
       playerDelay: parseFloat(formData.get('playerDelay')) || 1,
       hardcoreMode: formData.get('hardcoreMode') === 'on'

@@ -8,15 +8,17 @@ import { StartingBuildingsSelector } from './starting-buildings.js';
 import { getImportedSaveGame } from '../save-game-importer.js';
 
 export class WizardInitialSetup {
-  constructor(containerId, initialState = null, onUpdate = null) {
+  constructor(containerId, initialState = null, onUpdate = null, onAutoAdvance = null) {
     this.container = document.getElementById(containerId);
     this.state = initialState || {
       setupChoice: null,
       importedSaveGame: null,
       manualBuildings: null,
+      manualUpgrades: null,
       versionId: null
     };
     this.onUpdate = onUpdate;
+    this.onAutoAdvance = onAutoAdvance; // Callback to auto-advance wizard after import
     this.saveGameImportDialog = null;
     this.startingBuildingsSelector = null;
     this.importDialogContainer = null;
@@ -37,32 +39,45 @@ export class WizardInitialSetup {
         <p class="step-description">Choose how you want to set up your starting game state:</p>
         
         <div class="setup-options">
-          <label class="setup-option ${setupChoice === 'import' ? 'selected' : ''}">
-            <input type="radio" name="setup-choice" value="import" ${setupChoice === 'import' ? 'checked' : ''}>
-            <div class="option-content">
-              <strong>Import Save Game</strong>
-              <p>Import your Cookie Clicker save game to automatically configure starting buildings and settings</p>
+          <div class="setup-option-wrapper ${setupChoice === 'import' ? 'expanded' : ''}" data-option="import">
+            <label class="setup-option ${setupChoice === 'import' ? 'selected' : ''}">
+              <input type="radio" name="setup-choice" value="import" ${setupChoice === 'import' ? 'checked' : ''}>
+              <div class="option-content">
+                <strong>Import Save Game</strong>
+                <p>Import your Cookie Clicker save game to automatically configure starting buildings and settings</p>
+              </div>
+            </label>
+            <div class="setup-option-content" id="setup-content-import" style="display: ${setupChoice === 'import' ? 'block' : 'none'};">
+              <!-- Content will be inserted here -->
             </div>
-          </label>
+          </div>
           
-          <label class="setup-option ${setupChoice === 'manual' ? 'selected' : ''}">
-            <input type="radio" name="setup-choice" value="manual" ${setupChoice === 'manual' ? 'checked' : ''}>
-            <div class="option-content">
-              <strong>Manually Set Up Buildings</strong>
-              <p>Manually configure which buildings you already own</p>
+          <div class="setup-option-wrapper ${setupChoice === 'manual' ? 'expanded' : ''}" data-option="manual">
+            <label class="setup-option ${setupChoice === 'manual' ? 'selected' : ''}">
+              <input type="radio" name="setup-choice" value="manual" ${setupChoice === 'manual' ? 'checked' : ''}>
+              <div class="option-content">
+                <strong>Manually Set Up Buildings</strong>
+                <p>Manually configure which buildings you already own</p>
+              </div>
+            </label>
+            <div class="setup-option-content" id="setup-content-manual" style="display: ${setupChoice === 'manual' ? 'block' : 'none'};">
+              <!-- Content will be inserted here -->
             </div>
-          </label>
+          </div>
           
-          <label class="setup-option ${setupChoice === 'fresh' ? 'selected' : ''}">
-            <input type="radio" name="setup-choice" value="fresh" ${setupChoice === 'fresh' ? 'checked' : ''}>
-            <div class="option-content">
-              <strong>Start Fresh</strong>
-              <p>Start from the beginning with no pre-owned buildings</p>
+          <div class="setup-option-wrapper ${setupChoice === 'fresh' ? 'expanded' : ''}" data-option="fresh">
+            <label class="setup-option ${setupChoice === 'fresh' ? 'selected' : ''}">
+              <input type="radio" name="setup-choice" value="fresh" ${setupChoice === 'fresh' ? 'checked' : ''}>
+              <div class="option-content">
+                <strong>Start Fresh</strong>
+                <p>Start from the beginning with no pre-owned buildings</p>
+              </div>
+            </label>
+            <div class="setup-option-content" id="setup-content-fresh" style="display: ${setupChoice === 'fresh' ? 'block' : 'none'};">
+              <!-- Content will be inserted here -->
             </div>
-          </label>
+          </div>
         </div>
-
-        <div class="setup-content" id="setup-content-area"></div>
         
         <div class="error-message" id="step1-error" role="alert" aria-live="polite" style="display: none;"></div>
       </div>
@@ -82,14 +97,77 @@ export class WizardInitialSetup {
         this.handleChoiceChange(e.target.value);
       });
     });
+
+    // Add click handlers to labels to allow collapsing when clicking already selected option
+    const optionLabels = this.container.querySelectorAll('.setup-option');
+    optionLabels.forEach(label => {
+      label.addEventListener('click', (e) => {
+        // Don't handle if clicking on the radio button itself (it will trigger change event)
+        if (e.target.type === 'radio') {
+          return;
+        }
+        
+        const radio = label.querySelector('input[type="radio"]');
+        if (!radio) return;
+        
+        const optionValue = radio.value;
+        
+        // If this option is already selected, deselect it
+        if (this.state.setupChoice === optionValue) {
+          e.preventDefault();
+          e.stopPropagation();
+          // Uncheck the radio button
+          radio.checked = false;
+          // Clear the selection
+          this.handleChoiceChange(null);
+        }
+        // Otherwise, let the default behavior select it
+      });
+    });
   }
 
   /**
    * Handle setup choice change
-   * @param {string} choice - Selected choice ('import', 'manual', or 'fresh')
+   * @param {string|null} choice - Selected choice ('import', 'manual', 'fresh', or null to deselect)
    */
   handleChoiceChange(choice) {
     this.state.setupChoice = choice;
+    
+    // Uncheck all radio buttons first
+    const allRadios = this.container.querySelectorAll('input[name="setup-choice"]');
+    allRadios.forEach(radio => {
+      radio.checked = false;
+    });
+    
+    // Update selected state for all options
+    const allOptions = this.container.querySelectorAll('.setup-option');
+    allOptions.forEach(option => {
+      option.classList.remove('selected');
+    });
+    
+    // Update expanded state for all wrappers
+    const allWrappers = this.container.querySelectorAll('.setup-option-wrapper');
+    allWrappers.forEach(wrapper => {
+      wrapper.classList.remove('expanded');
+    });
+    
+    if (choice) {
+      // Check the selected radio button
+      const selectedRadio = this.container.querySelector(`input[name="setup-choice"][value="${choice}"]`);
+      if (selectedRadio) {
+        selectedRadio.checked = true;
+      }
+      
+      const selectedWrapper = this.container.querySelector(`[data-option="${choice}"]`);
+      if (selectedWrapper) {
+        const selectedOption = selectedWrapper.querySelector('.setup-option');
+        if (selectedOption) {
+          selectedOption.classList.add('selected');
+        }
+        selectedWrapper.classList.add('expanded');
+      }
+    }
+    
     this.updateContent();
     this.notifyUpdate();
   }
@@ -98,23 +176,46 @@ export class WizardInitialSetup {
    * Update content area based on selected choice
    */
   updateContent() {
-    const contentArea = this.container.querySelector('#setup-content-area');
-    if (!contentArea) return;
-
     const { setupChoice } = this.state;
 
+    // Get all option wrappers and content areas using data attributes
+    const importWrapper = this.container.querySelector('[data-option="import"]');
+    const manualWrapper = this.container.querySelector('[data-option="manual"]');
+    const freshWrapper = this.container.querySelector('[data-option="fresh"]');
+    
+    const importContent = this.container.querySelector('#setup-content-import');
+    const manualContent = this.container.querySelector('#setup-content-manual');
+    const freshContent = this.container.querySelector('#setup-content-fresh');
+
+    // Update expanded state for all wrappers
+    [importWrapper, manualWrapper, freshWrapper].forEach(wrapper => {
+      if (wrapper) {
+        wrapper.classList.remove('expanded');
+      }
+    });
+
     // Clear previous content and destroy existing components
-    contentArea.innerHTML = '';
+    if (importContent) importContent.innerHTML = '';
+    if (manualContent) manualContent.innerHTML = '';
+    if (freshContent) freshContent.innerHTML = '';
+    
     this.saveGameImportDialog = null;
     this.startingBuildingsSelector = null;
 
     if (setupChoice === 'import') {
+      // Expand import option
+      if (importWrapper) importWrapper.classList.add('expanded');
+      if (importContent) importContent.style.display = 'block';
+
       // Create container for import dialog (inline, not modal)
       this.importDialogContainer = document.createElement('div');
       this.importDialogContainer.id = 'wizard-import-dialog-container';
-      contentArea.appendChild(this.importDialogContainer);
+      if (importContent) {
+        importContent.appendChild(this.importDialogContainer);
+      }
 
       // Create SaveGameImportDialog instance for inline use
+      // Disable auto-hide and set up auto-advance callback for wizard context
       this.saveGameImportDialog = new SaveGameImportDialog(
         'wizard-import-dialog-container',
         (importedSaveGame) => {
@@ -122,6 +223,18 @@ export class WizardInitialSetup {
         },
         () => {
           this.handleSaveGameCleared();
+        },
+        {
+          autoHide: false, // Don't auto-hide in wizard context
+          onImportComplete: (importedSaveGame) => {
+            // Auto-advance to next step after successful import
+            if (this.onAutoAdvance) {
+              // Small delay to ensure UI updates are visible
+              setTimeout(() => {
+                this.onAutoAdvance();
+              }, 500);
+            }
+          }
         }
       );
 
@@ -134,16 +247,22 @@ export class WizardInitialSetup {
         this.handleSaveGameImported(existingImport);
       }
     } else if (setupChoice === 'manual') {
+      // Expand manual option
+      if (manualWrapper) manualWrapper.classList.add('expanded');
+      if (manualContent) manualContent.style.display = 'block';
+
       // Create container for manual building selector
       this.manualSetupContainer = document.createElement('div');
       this.manualSetupContainer.id = 'wizard-manual-setup-container';
-      contentArea.appendChild(this.manualSetupContainer);
+      if (manualContent) {
+        manualContent.appendChild(this.manualSetupContainer);
+      }
 
       // Create StartingBuildingsSelector instance
       this.startingBuildingsSelector = new StartingBuildingsSelector(
         'wizard-manual-setup-container',
-        (buildings) => {
-          this.handleManualBuildingsUpdate(buildings);
+        (buildings, upgrades) => {
+          this.handleManualBuildingsUpdate(buildings, upgrades);
         }
       );
 
@@ -155,13 +274,27 @@ export class WizardInitialSetup {
       if (this.state.manualBuildings) {
         this.startingBuildingsSelector.setStartingBuildings(this.state.manualBuildings);
       }
+
+      // Restore manual upgrades if they exist
+      if (this.state.manualUpgrades) {
+        this.startingBuildingsSelector.setPurchasedUpgrades(this.state.manualUpgrades);
+      }
     } else if (setupChoice === 'fresh') {
-      // Fresh start - no additional content needed
-      contentArea.innerHTML = '<p class="info-text">Starting with no pre-owned buildings. Click Next to continue.</p>';
+      // Expand fresh option
+      if (freshWrapper) freshWrapper.classList.add('expanded');
+      if (freshContent) {
+        freshContent.style.display = 'block';
+        freshContent.innerHTML = '<p class="info-text">Starting with no pre-owned buildings. Click Next to continue.</p>';
+      }
       // Clear any previous data
       this.state.importedSaveGame = null;
       this.state.manualBuildings = null;
       this.notifyUpdate();
+    } else {
+      // No option selected - collapse all
+      if (importContent) importContent.style.display = 'none';
+      if (manualContent) manualContent.style.display = 'none';
+      if (freshContent) freshContent.style.display = 'none';
     }
   }
 
@@ -195,11 +328,13 @@ export class WizardInitialSetup {
   }
 
   /**
-   * Handle manual buildings update
+   * Handle manual buildings and upgrades update
    * @param {Object} buildings - Building counts
+   * @param {Array} upgrades - Array of purchased upgrade names
    */
-  handleManualBuildingsUpdate(buildings) {
+  handleManualBuildingsUpdate(buildings, upgrades = []) {
     this.state.manualBuildings = buildings;
+    this.state.manualUpgrades = upgrades;
     this.notifyUpdate();
   }
 

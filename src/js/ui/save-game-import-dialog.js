@@ -8,11 +8,15 @@ import { SaveGameParseError, SaveGameDecodeError } from '../save-game-parser.js'
 import { SaveGameValidationError, SaveGameVersionError } from '../save-game-importer.js';
 
 export class SaveGameImportDialog {
-  constructor(containerId, onImport, onClear) {
+  constructor(containerId, onImport, onClear, options = {}) {
     this.container = document.getElementById(containerId);
     this.onImport = onImport; // Callback when import succeeds
     this.onClear = onClear; // Callback when import is cleared
     this.isVisible = false;
+    this.options = {
+      autoHide: options.autoHide !== false, // Default to true, can be disabled for wizard context
+      onImportComplete: options.onImportComplete || null // Optional callback after import completes
+    };
   }
 
   /**
@@ -77,33 +81,10 @@ export class SaveGameImportDialog {
             <div class="form-actions">
               <button type="submit" class="btn-primary" id="import-btn">Import Save Game</button>
               ${hasImport ? '<button type="button" id="clear-import-btn" class="btn-secondary">Clear Import</button>' : ''}
-              <button type="button" id="cancel-import-btn" class="btn-secondary">Cancel</button>
+              ${this.options.autoHide !== false ? '<button type="button" id="cancel-import-btn" class="btn-secondary">Cancel</button>' : ''}
             </div>
           </form>
-          ${hasImport ? this.renderImportStatus(importState) : ''}
         </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Render import status section
-   */
-  renderImportStatus(importState) {
-    return `
-      <div class="import-status" id="import-status">
-        <h3>Current Import</h3>
-        <p><strong>Status:</strong> ${importState.isLoaded ? 'Loaded' : 'Not loaded'}</p>
-        ${importState.version ? `<p><strong>Version:</strong> ${this.escapeHtml(importState.version)}</p>` : ''}
-        ${importState.importedAt ? `<p><strong>Imported:</strong> ${new Date(importState.importedAt).toLocaleString()}</p>` : ''}
-        ${importState.warningMessages && importState.warningMessages.length > 0 ? `
-          <div class="warnings">
-            <strong>Warnings:</strong>
-            <ul>
-              ${importState.warningMessages.map(w => `<li>${this.escapeHtml(w)}</li>`).join('')}
-            </ul>
-          </div>
-        ` : ''}
       </div>
     `;
   }
@@ -117,30 +98,35 @@ export class SaveGameImportDialog {
     const clearBtn = this.container.querySelector('#clear-import-btn');
 
     form?.addEventListener('submit', this.handleSubmit.bind(this));
-    cancelBtn?.addEventListener('click', () => {
-      this.hide();
-    });
+    
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        this.hide();
+      });
+    }
 
     if (clearBtn) {
       clearBtn.addEventListener('click', this.handleClear.bind(this));
     }
 
-    // Close on overlay click
-    const overlay = this.container.querySelector('.save-game-import-dialog-overlay');
-    overlay?.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        this.hide();
-      }
-    });
+    // Close on overlay click (only if autoHide is enabled, i.e., modal mode)
+    if (this.options.autoHide !== false) {
+      const overlay = this.container.querySelector('.save-game-import-dialog-overlay');
+      overlay?.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          this.hide();
+        }
+      });
 
-    // Close on Escape key
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        this.hide();
-        document.removeEventListener('keydown', handleEscape);
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
+      // Close on Escape key (only in modal mode)
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          this.hide();
+          document.removeEventListener('keydown', handleEscape);
+        }
+      };
+      document.addEventListener('keydown', handleEscape);
+    }
   }
 
   /**
@@ -179,24 +165,33 @@ export class SaveGameImportDialog {
       // Import the save game
       const imported = await importSaveGame(saveString);
       
-      // Show success message
-      if (successElement) {
-        successElement.textContent = 'Save game imported successfully!';
-        successElement.style.display = 'block';
-      }
-
-      // Update UI to show import status
+      // Update UI to show import status (this will also hide loading indicator)
       this.render();
+      
+      // Show success message after render
+      const newSuccessElement = this.container.querySelector('#import-success');
+      if (newSuccessElement) {
+        newSuccessElement.textContent = 'Save game imported successfully!';
+        newSuccessElement.style.display = 'block';
+      }
 
       // Notify parent component
       if (this.onImport) {
         this.onImport(imported);
       }
 
-      // Hide dialog after a short delay
-      setTimeout(() => {
-        this.hide();
-      }, 2000);
+      // Call optional import complete callback (for auto-advancing wizard)
+      if (this.options.onImportComplete) {
+        this.options.onImportComplete(imported);
+      }
+
+      // Hide import dialog after a short delay (only if autoHide is enabled)
+      // The details dialog will be shown by the parent component
+      if (this.options.autoHide) {
+        setTimeout(() => {
+          this.hide();
+        }, 1000);
+      }
     } catch (error) {
       console.error('Error importing save game:', error);
       
@@ -220,9 +215,13 @@ export class SaveGameImportDialog {
         errorElement.style.display = 'block';
       }
     } finally {
-      // Hide loading indicator
-      if (loadingElement) loadingElement.style.display = 'none';
-      if (importBtn) importBtn.disabled = false;
+      // Hide loading indicator (get fresh reference in case render() was called)
+      const currentLoadingElement = this.container.querySelector('#import-loading');
+      if (currentLoadingElement) currentLoadingElement.style.display = 'none';
+      
+      // Re-enable import button (get fresh reference in case render() was called)
+      const currentImportBtn = this.container.querySelector('#import-btn');
+      if (currentImportBtn) currentImportBtn.disabled = false;
     }
   }
 
