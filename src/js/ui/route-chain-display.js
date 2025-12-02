@@ -8,6 +8,7 @@ import { getProgress, saveProgress } from '../storage.js';
 import { saveRouteChain } from '../storage.js';
 import { extractFinalStateFromRoute } from '../utils/route-state-extractor.js';
 import { formatNumber } from '../utils/format.js';
+import { exportRoute } from './route-export.js';
 
 export class RouteChainDisplay {
   constructor(containerId, onSaveRoute = null) {
@@ -84,7 +85,10 @@ export class RouteChainDisplay {
     let routeNavHtml = '<div class="route-chain-header">';
     routeNavHtml += '<div class="route-chain-header-top">';
     routeNavHtml += '<h2>Route Chain</h2>';
+    routeNavHtml += '<div class="route-chain-actions">';
+    routeNavHtml += '<button class="btn-secondary" id="export-chain-btn">Export Chain</button>';
     routeNavHtml += '<button class="btn-primary" id="save-chain-btn">Save Chain</button>';
+    routeNavHtml += '</div>';
     routeNavHtml += '</div>';
     routeNavHtml += '<div class="route-chain-navigation">';
     
@@ -422,6 +426,36 @@ export class RouteChainDisplay {
       saveBtn.addEventListener('click', () => {
         this.handleSaveChain();
       });
+    }
+
+    // Export chain button
+    const exportBtn = this.container.querySelector('#export-chain-btn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        this.handleExportChain();
+      });
+    }
+  }
+
+  /**
+   * Handle export chain button click
+   */
+  handleExportChain() {
+    if (!this.currentRouteChainResult) {
+      console.error('Cannot export: no chain result');
+      return;
+    }
+
+    try {
+      // Convert chain result to RouteChain format for export
+      const chainName = this.generateDefaultChainName();
+      const routeChain = this.convertChainResultToRouteChain(chainName);
+      
+      // Export the chain
+      exportRoute(routeChain, 'routeChain', chainName);
+    } catch (error) {
+      console.error('Failed to export route chain:', error);
+      alert(`Failed to export route chain: ${error.message}`);
     }
   }
 

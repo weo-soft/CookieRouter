@@ -15,6 +15,8 @@ import { calculateRoute } from './js/simulation.js';
 import { getImportedSaveGame, getImportState } from './js/save-game-importer.js';
 import { getSavedRoutes } from './js/storage.js';
 import { logStorageInfo, logStorageAnalysis } from './js/utils/storage-analysis.js';
+import { showImportPreview, clearImportPreview } from './js/ui/route-import-preview.js';
+import { RouteImportDialog } from './js/ui/route-import-dialog.js';
 
 // Initialize UI components (conditionally based on page state)
 // CategorySelector, CustomCategoryForm, and StartingBuildingsSelector are only used in wizard, not in main.js
@@ -26,6 +28,7 @@ const saveGameImportDialog = new SaveGameImportDialog('save-game-import-dialog-s
 const saveGameDetailsView = new SaveGameDetailsView('save-game-details-section');
 const saveGameDetailsDialog = new SaveGameDetailsDialog('save-game-details-dialog-section', handleCreateRouteFromSaveGame, handleSaveGameDetailsDialogClose);
 const routeCreationWizard = new RouteCreationWizard('route-creation-wizard-section', handleWizardComplete, handleWizardCancel);
+const routeImportDialog = new RouteImportDialog('route-import-dialog-section', handleRouteImportComplete);
 
 let isCalculating = false;
 let currentVersion = 'v2052'; // Default version
@@ -221,6 +224,25 @@ function handleCreateRouteFromSaveGame() {
  */
 function handleSaveGameDetailsDialogClose() {
   // Dialog was closed, nothing special needed
+}
+
+/**
+ * Handle route import complete
+ * @param {Object} validationResult - Validation result from import
+ * @param {string} fileName - Name of imported file or 'pasted-data'
+ */
+function handleRouteImportComplete(validationResult, fileName) {
+  if (validationResult.isValid) {
+    showImportPreview({
+      routeType: validationResult.routeType,
+      parsedData: validationResult.parsedData,
+      validationResult: validationResult,
+      fileName: fileName
+    });
+  } else {
+    // Errors are already shown in the dialog
+    // Keep dialog open so user can fix and retry
+  }
 }
 
 /**
@@ -622,6 +644,14 @@ async function init() {
     if (createRouteBtn) {
       createRouteBtn.addEventListener('click', () => {
         routeCreationWizard.show();
+      });
+    }
+
+    // Set up import route button
+    const importRouteBtn = document.getElementById('import-route-btn');
+    if (importRouteBtn) {
+      importRouteBtn.addEventListener('click', () => {
+        routeImportDialog.show();
       });
     }
 
