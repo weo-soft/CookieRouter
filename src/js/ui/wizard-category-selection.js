@@ -6,6 +6,7 @@
 import { CategorySelector } from './category-selector.js';
 import { CustomCategoryForm } from './custom-category-form.js';
 import { WizardAchievementSelection } from './wizard-achievement-selection.js';
+import { WizardRouteChainSelection } from './wizard-route-chain-selection.js';
 import { getCategories } from '../storage.js';
 
 export class WizardCategorySelection {
@@ -77,6 +78,19 @@ export class WizardCategorySelection {
             </label>
             <div class="category-option-content" id="category-content-achievement" style="display: ${categoryType === 'achievement' ? 'block' : 'none'};">
               <!-- Content will be inserted here -->
+            </div>
+          </div>
+          
+          <div class="category-option-wrapper ${categoryType === 'chain' ? 'expanded' : ''}" data-option="chain">
+            <label class="category-option ${categoryType === 'chain' ? 'selected' : ''}">
+              <input type="radio" name="category-type" value="chain" ${categoryType === 'chain' ? 'checked' : ''}>
+              <div class="option-content">
+                <strong>Route Chain</strong>
+                <p>Create a sequence of routes that build upon each other</p>
+              </div>
+            </label>
+            <div class="category-option-content" id="category-content-chain" style="display: ${categoryType === 'chain' ? 'block' : 'none'};">
+              <!-- Route chain selection will be inserted here -->
             </div>
           </div>
         </div>
@@ -188,6 +202,7 @@ export class WizardCategorySelection {
       this.state.selectedCategoryId = null;
       this.state.categoryConfig = null;
       this.state.achievementIds = null;
+      this.state.selectedRoutes = null;
     }
     
     await this.updateContent();
@@ -204,13 +219,15 @@ export class WizardCategorySelection {
     const predefinedWrapper = this.container.querySelector('[data-option="predefined"]');
     const customWrapper = this.container.querySelector('[data-option="custom"]');
     const achievementWrapper = this.container.querySelector('[data-option="achievement"]');
+    const chainWrapper = this.container.querySelector('[data-option="chain"]');
     
     const predefinedContent = this.container.querySelector('#category-content-predefined');
     const customContent = this.container.querySelector('#category-content-custom');
     const achievementContent = this.container.querySelector('#category-content-achievement');
+    const chainContent = this.container.querySelector('#category-content-chain');
 
     // Update expanded state for all wrappers
-    [predefinedWrapper, customWrapper, achievementWrapper].forEach(wrapper => {
+    [predefinedWrapper, customWrapper, achievementWrapper, chainWrapper].forEach(wrapper => {
       if (wrapper) {
         wrapper.classList.remove('expanded');
       }
@@ -220,10 +237,12 @@ export class WizardCategorySelection {
     if (predefinedContent) predefinedContent.innerHTML = '';
     if (customContent) customContent.innerHTML = '';
     if (achievementContent) achievementContent.innerHTML = '';
+    if (chainContent) chainContent.innerHTML = '';
     
     this.categorySelector = null;
     this.customCategoryForm = null;
     this.achievementSelection = null;
+    this.routeChainSelection = null;
 
     if (categoryType === 'predefined') {
       // Expand predefined option
@@ -329,11 +348,42 @@ export class WizardCategorySelection {
           selectedAchievementIds: this.state.achievementIds
         });
       }
+    } else if (categoryType === 'chain') {
+      // Expand chain option
+      if (chainWrapper) chainWrapper.classList.add('expanded');
+      if (chainContent) chainContent.style.display = 'block';
+
+      // Create container for route chain selection
+      this.routeChainSelectionContainer = document.createElement('div');
+      this.routeChainSelectionContainer.id = 'wizard-route-chain-selection-container';
+      if (chainContent) {
+        chainContent.appendChild(this.routeChainSelectionContainer);
+      }
+
+      // Create WizardRouteChainSelection instance
+      this.routeChainSelection = new WizardRouteChainSelection(
+        'wizard-route-chain-selection-container',
+        (routes) => {
+          this.handleRouteChainSelected(routes);
+        }
+      );
+
+      // Render route chain selection
+      await this.routeChainSelection.render();
+
+      // Restore selected routes if navigating back
+      if (this.state.selectedRoutes && this.state.selectedRoutes.length > 0) {
+        // Restore routes to chain selection
+        this.state.selectedRoutes.forEach(route => {
+          this.routeChainSelection.addRoute(route.routeConfig);
+        });
+      }
     } else {
       // No option selected - collapse all
       if (predefinedContent) predefinedContent.style.display = 'none';
       if (customContent) customContent.style.display = 'none';
       if (achievementContent) achievementContent.style.display = 'none';
+      if (chainContent) chainContent.style.display = 'none';
     }
   }
 
@@ -363,6 +413,20 @@ export class WizardCategorySelection {
     };
 
     // Settings are now handled inline in the expanded category item
+    this.notifyUpdate();
+  }
+
+  /**
+   * Handle route chain selection
+   * @param {Array} routes - Selected routes array
+   */
+  handleRouteChainSelected(routes) {
+    this.state.selectedRoutes = routes;
+    this.state.categoryType = 'chain';
+    this.state.categoryConfig = {
+      type: 'chain',
+      routes: routes
+    };
     this.notifyUpdate();
   }
 

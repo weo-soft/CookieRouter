@@ -7,7 +7,7 @@ import { WizardStepIndicator } from './wizard-step-indicator.js';
 import { WizardInitialSetup } from './wizard-initial-setup.js';
 import { WizardCategorySelection } from './wizard-category-selection.js';
 import { WizardSummary } from './wizard-summary.js';
-import { calculateRoute } from '../simulation.js';
+import { calculateRoute, calculateRouteChain } from '../simulation.js';
 import { saveRoute } from '../storage.js';
 import { getImportedSaveGame } from '../save-game-importer.js';
 
@@ -29,14 +29,16 @@ export class RouteCreationWizard {
       step2Data: {
         categoryType: null,
         selectedCategoryId: null,
-        categoryConfig: null
+        categoryConfig: null,
+        selectedRoutes: [] // For route chain mode
       },
       validationErrors: {
         step1: [],
         step2: []
       },
       isCalculating: false,
-      calculatedRoute: null
+      calculatedRoute: null,
+      calculatedRouteChain: null // For route chain mode
     };
 
     // Step components
@@ -86,14 +88,17 @@ export class RouteCreationWizard {
       step2Data: {
         categoryType: initialState?.step2Data?.categoryType || null,
         selectedCategoryId: initialState?.step2Data?.selectedCategoryId || null,
-        categoryConfig: initialState?.step2Data?.categoryConfig || null
+        categoryConfig: initialState?.step2Data?.categoryConfig || null,
+        achievementIds: initialState?.step2Data?.achievementIds || null,
+        selectedRoutes: initialState?.step2Data?.selectedRoutes || [] // For route chain mode
       },
       validationErrors: {
         step1: [],
         step2: []
       },
       isCalculating: false,
-      calculatedRoute: null
+      calculatedRoute: null,
+      calculatedRouteChain: null // For route chain mode
     };
 
     this.isVisible = true;
@@ -460,32 +465,39 @@ export class RouteCreationWizard {
     } else if (this.state.currentStep === 1) {
       // Validate Step 2
       if (!this.state.step2Data.categoryType) {
-        this.state.validationErrors.step2.push('Please select a category type');
-      }
-      
-      if (!this.state.step2Data.categoryConfig) {
-        this.state.validationErrors.step2.push('Please configure a category');
+        this.state.validationErrors.step2.push('Please select a route type');
+      } else if (this.state.step2Data.categoryType === 'chain') {
+        // Validate route chain
+        if (!this.state.step2Data.selectedRoutes || this.state.step2Data.selectedRoutes.length === 0) {
+          this.state.validationErrors.step2.push('Please select at least one route for the chain');
+        }
+        // Additional validation can be added here (e.g., max routes, version compatibility)
       } else {
-        // Validate category config values
-        // Achievement routes don't need targetCookies
-        if (this.state.step2Data.categoryType !== 'achievement') {
-          if (!this.state.step2Data.categoryConfig.targetCookies || this.state.step2Data.categoryConfig.targetCookies <= 0) {
-            this.state.validationErrors.step2.push('Target cookies must be greater than 0');
-          }
+        // Validate single route (predefined, custom, or achievement)
+        if (!this.state.step2Data.categoryConfig) {
+          this.state.validationErrors.step2.push('Please configure a category');
         } else {
-          // Validate achievement selection
-          if (!this.state.step2Data.categoryConfig.achievementIds || this.state.step2Data.categoryConfig.achievementIds.length === 0) {
-            this.state.validationErrors.step2.push('Please select at least one achievement');
+          // Validate category config values
+          // Achievement routes don't need targetCookies
+          if (this.state.step2Data.categoryType !== 'achievement') {
+            if (!this.state.step2Data.categoryConfig.targetCookies || this.state.step2Data.categoryConfig.targetCookies <= 0) {
+              this.state.validationErrors.step2.push('Target cookies must be greater than 0');
+            }
+          } else {
+            // Validate achievement selection
+            if (!this.state.step2Data.categoryConfig.achievementIds || this.state.step2Data.categoryConfig.achievementIds.length === 0) {
+              this.state.validationErrors.step2.push('Please select at least one achievement');
+            }
           }
-        }
-        if (!this.state.step2Data.categoryConfig.version) {
-          this.state.validationErrors.step2.push('Please select a game version');
-        }
-        if (this.state.step2Data.categoryConfig.playerCps !== undefined && this.state.step2Data.categoryConfig.playerCps < 0) {
-          this.state.validationErrors.step2.push('Player CPS cannot be negative');
-        }
-        if (this.state.step2Data.categoryConfig.playerDelay !== undefined && this.state.step2Data.categoryConfig.playerDelay < 0) {
-          this.state.validationErrors.step2.push('Player delay cannot be negative');
+          if (!this.state.step2Data.categoryConfig.version) {
+            this.state.validationErrors.step2.push('Please select a game version');
+          }
+          if (this.state.step2Data.categoryConfig.playerCps !== undefined && this.state.step2Data.categoryConfig.playerCps < 0) {
+            this.state.validationErrors.step2.push('Player CPS cannot be negative');
+          }
+          if (this.state.step2Data.categoryConfig.playerDelay !== undefined && this.state.step2Data.categoryConfig.playerDelay < 0) {
+            this.state.validationErrors.step2.push('Player delay cannot be negative');
+          }
         }
       }
 
@@ -540,6 +552,16 @@ export class RouteCreationWizard {
       throw new Error('Route calculation already in progress');
     }
 
+    // Check if this is a route chain
+    const isChainMode = this.state.step2Data.categoryType === 'chain' && 
+                       this.state.step2Data.selectedRoutes && 
+                       this.state.step2Data.selectedRoutes.length > 0;
+
+    if (isChainMode) {
+      return await this.calculateRouteChain();
+    }
+
+    // Single route calculation (existing logic)
     // Create RouteCreationConfig from wizard state
     console.log('[Wizard] Creating route config...');
     const config = this.createRouteCreationConfig();
@@ -659,6 +681,133 @@ export class RouteCreationWizard {
       if (this.summary) {
         this.summary.setCalculating(false);
         this.summary.showError(error.message || 'Failed to calculate route');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate route chain from wizard configuration
+   * @returns {Promise<Object>} Chain calculation result
+   */
+  async calculateRouteChain() {
+    console.log('[Wizard] calculateRouteChain() called');
+    
+    if (this.state.isCalculating) {
+      console.error('[Wizard] Calculation already in progress');
+      throw new Error('Route calculation already in progress');
+    }
+
+    if (!this.state.step2Data.selectedRoutes || this.state.step2Data.selectedRoutes.length === 0) {
+      throw new Error('No routes selected for chain');
+    }
+
+    this.state.isCalculating = true;
+    if (this.summary) {
+      this.summary.setCalculating(true);
+    }
+
+    try {
+      console.log('[Wizard] Starting chain calculation...');
+      
+      // Merge starting buildings (import + manual, manual takes precedence)
+      const startingBuildings = {};
+      if (this.state.step1Data.importedSaveGame?.buildingCounts) {
+        Object.assign(startingBuildings, this.state.step1Data.importedSaveGame.buildingCounts);
+      }
+      if (this.state.step1Data.manualBuildings) {
+        Object.assign(startingBuildings, this.state.step1Data.manualBuildings);
+      }
+
+      // Get version ID
+      const versionId = this.state.step1Data.versionId || 
+                       this.state.step1Data.importedSaveGame?.version || 
+                       'v2052';
+
+      // Collect purchased upgrades
+      let purchasedUpgrades = [];
+      if (this.state.step1Data.importedSaveGame?.upgrades) {
+        purchasedUpgrades = [...this.state.step1Data.importedSaveGame.upgrades];
+      }
+      if (this.state.step1Data.manualUpgrades && Array.isArray(this.state.step1Data.manualUpgrades)) {
+        purchasedUpgrades = [...this.state.step1Data.manualUpgrades];
+      }
+
+      // Progress callback to update UI during chain calculation
+      const onProgress = (progress) => {
+        if (this.summary) {
+          // Update summary with chain progress
+          const progressText = `Calculating route ${progress.currentRouteIndex + 1} of ${progress.totalRoutes}: ${progress.routeName}`;
+          this.summary.updateChainProgress(progressText, progress.currentRouteIndex, progress.totalRoutes, progress.routeProgress);
+        }
+        // Yield to browser to keep UI responsive
+        return new Promise(resolve => setTimeout(resolve, 0));
+      };
+
+      // Create chain config
+      const chainConfig = {
+        routes: this.state.step2Data.selectedRoutes.map(route => route.routeConfig),
+        versionId: versionId
+      };
+
+      // Calculate chain
+      console.log('[Wizard] Calling calculateRouteChain with:', { routes: chainConfig.routes.length, versionId, startingBuildings });
+      const result = await calculateRouteChain(chainConfig, startingBuildings, purchasedUpgrades, {
+        algorithm: 'GPL',
+        lookahead: 1,
+        onProgress: onProgress
+      });
+      console.log('[Wizard] Chain calculation returned:', result);
+
+      // Store calculated chain with route configs for saving
+      this.state.calculatedRouteChain = {
+        calculatedRoutes: result.calculatedRoutes,
+        accumulatedBuildings: result.accumulatedBuildings,
+        accumulatedUpgrades: result.accumulatedUpgrades,
+        errors: result.errors,
+        success: result.success,
+        routeConfigs: this.state.step2Data.selectedRoutes.map(r => r.routeConfig) // Store configs for saving
+      };
+      this.state.isCalculating = false;
+
+      // Handle errors
+      if (!result.success && result.errors.length > 0) {
+        const error = result.errors[0];
+        const errorMessage = `Route ${error.routeIndex + 1} (${error.routeName}) failed: ${error.message}`;
+        if (this.summary) {
+          this.summary.setCalculating(false);
+          this.summary.showError(errorMessage);
+        }
+        // Don't throw - allow user to see partial results and retry
+        console.error('[Wizard] Chain calculation failed:', errorMessage);
+      } else {
+        // Reset calculating state
+        if (this.summary) {
+          this.summary.setCalculating(false);
+        }
+      }
+
+      console.log('[Wizard] Chain calculation completed');
+      
+      // Close wizard and call completion callback
+      this.hide();
+      
+      if (this.onComplete) {
+        try {
+          // Pass chain result to completion callback with route configs
+          this.onComplete(this.state.calculatedRouteChain, null, versionId);
+        } catch (error) {
+          console.error('[Wizard] Error in wizard completion callback:', error);
+        }
+      }
+
+      return this.state.calculatedRouteChain;
+    } catch (error) {
+      console.error('[Wizard] Error during chain calculation:', error);
+      this.state.isCalculating = false;
+      if (this.summary) {
+        this.summary.setCalculating(false);
+        this.summary.showError(error.message || 'Failed to calculate route chain');
       }
       throw error;
     }

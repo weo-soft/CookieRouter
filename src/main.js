@@ -4,6 +4,7 @@
  */
 
 import { RouteDisplay } from './js/ui/route-display.js';
+import { RouteChainDisplay } from './js/ui/route-chain-display.js';
 import { SaveRouteDialog } from './js/ui/save-route-dialog.js';
 import { SavedRoutesList } from './js/ui/saved-routes-list.js';
 import { SaveGameImportDialog } from './js/ui/save-game-import-dialog.js';
@@ -20,6 +21,7 @@ import { logStorageInfo, logStorageAnalysis } from './js/utils/storage-analysis.
 let savedRoutesList = null; // Will be initialized conditionally based on page state
 const saveRouteDialog = new SaveRouteDialog('save-route-dialog-section', handleRouteSaved, handleSaveRouteCancel);
 const routeDisplay = new RouteDisplay('route-section', handleSaveRouteClick);
+const routeChainDisplay = new RouteChainDisplay('route-section', handleSaveRouteClick);
 const saveGameImportDialog = new SaveGameImportDialog('save-game-import-dialog-section', handleSaveGameImported, handleSaveGameCleared);
 const saveGameDetailsView = new SaveGameDetailsView('save-game-details-section');
 const saveGameDetailsDialog = new SaveGameDetailsDialog('save-game-details-dialog-section', handleCreateRouteFromSaveGame, handleSaveGameDetailsDialogClose);
@@ -294,41 +296,53 @@ async function updatePageStateAfterRouteSave() {
 
 /**
  * Handle wizard completion
- * @param {Object} route - Calculated route
- * @param {Object} category - Category configuration
+ * @param {Object} route - Calculated route or route chain result
+ * @param {Object} category - Category configuration (null for chains)
  * @param {string} versionId - Game version ID
  */
 async function handleWizardComplete(route, category, versionId) {
   console.log('[Main] Wizard completion handler called', { route, category, versionId });
   
   try {
-    // Set category and version on route display for saving
-    if (category && versionId) {
-      routeDisplay.setCategoryAndVersion(category, versionId);
-    }
+    // Check if this is a route chain (has calculatedRoutes array)
+    if (route && Array.isArray(route.calculatedRoutes) && route.calculatedRoutes.length > 0) {
+      // Display route chain
+      console.log('[Main] Displaying route chain...');
+      // Extract route configs from wizard state if available
+      const routeConfigs = route.routeConfigs || [];
+      await routeChainDisplay.displayRouteChain(route, versionId, routeConfigs);
+      console.log('[Main] Route chain displayed');
+    } else {
+      // Display single route
+      // Set category and version on route display for saving
+      if (category && versionId) {
+        routeDisplay.setCategoryAndVersion(category, versionId);
+      }
+      
+      // Display the calculated route
+      console.log('[Main] Displaying route...');
+      await routeDisplay.displayRoute(route);
+      console.log('[Main] Route displayed');
     
-    // Display the calculated route
-    console.log('[Main] Displaying route...');
-    await routeDisplay.displayRoute(route);
-    console.log('[Main] Route displayed');
-    
-    // Show warning if route couldn't be saved
-    if (route.saveError) {
-      console.warn('[Main] Route save failed:', route.saveError);
-      // Show a user-visible warning (could be enhanced with a toast notification)
-      const routeSection = document.getElementById('route-section');
-      if (routeSection) {
-        const warning = document.createElement('div');
-        warning.className = 'save-warning';
-        warning.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; padding: 12px; margin: 10px 0; border-radius: 4px; color: #856404;';
-        warning.innerHTML = `
-          <strong>Warning:</strong> The route was calculated successfully but could not be saved to localStorage. 
-          ${route.saveError.includes('quota') ? 'Please delete old routes to free up space.' : route.saveError}
-        `;
-        routeSection.insertBefore(warning, routeSection.firstChild);
+      // Show warning if route couldn't be saved
+      if (route.saveError) {
+        console.warn('[Main] Route save failed:', route.saveError);
+        // Show a user-visible warning (could be enhanced with a toast notification)
+        const routeSection = document.getElementById('route-section');
+        if (routeSection) {
+          const warning = document.createElement('div');
+          warning.className = 'save-warning';
+          warning.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; padding: 12px; margin: 10px 0; border-radius: 4px; color: #856404;';
+          warning.innerHTML = `
+            <strong>Warning:</strong> The route was calculated successfully but could not be saved to localStorage. 
+            ${route.saveError.includes('quota') ? 'Please delete old routes to free up space.' : route.saveError}
+          `;
+          routeSection.insertBefore(warning, routeSection.firstChild);
+        }
       }
     }
     
+    // Common post-display logic for both chains and single routes
     // Check if a save game was imported during the wizard and make it available
     const importedSaveGame = getImportedSaveGame();
     if (importedSaveGame) {
