@@ -1,0 +1,16 @@
+{
+  "name": "fortyHoliday",
+  "description": "The 40 achievement run but in holiday mode. Christmas is fastest.",
+  "version": "v10466_xmas",
+  "targetCookies": "4 * 10**6",
+  "defaultPlayerCps": 8,
+  "defaultPlayerDelay": 1,
+  "hardcoreMode": false,
+  "initialBuildings": {},
+  "initialCookies": 60,
+  "initialTime": 15,
+  "initialPurchases": [
+    "Cursor"
+  ]
+}
+

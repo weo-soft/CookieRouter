@@ -1,0 +1,16 @@
+{
+  "name": "neverclick",
+  "description": "Bake 1 million cookies while only clicking the big cookie by hand 15 times",
+  "version": "v2052",
+  "targetCookies": "1 * 10**6",
+  "defaultPlayerCps": 0,
+  "defaultPlayerDelay": 0,
+  "hardcoreMode": false,
+  "initialBuildings": {
+    "Cursor": 1
+  },
+  "initialCookies": 15,
+  "initialTime": 1.2,
+  "initialPurchases": []
+}
+

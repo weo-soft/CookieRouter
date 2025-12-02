@@ -1,0 +1,16 @@
+{
+  "name": "forty",
+  "description": "To 40 achievements. We just aim for a large amount of cookies and assume that will be enough to get 40.",
+  "version": "v10466",
+  "targetCookies": "30 * 10**6",
+  "defaultPlayerCps": 8,
+  "defaultPlayerDelay": 1,
+  "hardcoreMode": false,
+  "initialBuildings": {},
+  "initialCookies": null,
+  "initialTime": null,
+  "initialPurchases": [
+    "Cursor"
+  ]
+}
+

@@ -1,0 +1,16 @@
+{
+  "name": "nevercore",
+  "description": "Nevercore category",
+  "version": "v2052",
+  "targetCookies": 1000000,
+  "defaultPlayerCps": 0.0001,
+  "defaultPlayerDelay": 0,
+  "hardcoreMode": true,
+  "initialBuildings": {
+    "Cursor": 1
+  },
+  "initialCookies": null,
+  "initialTime": null,
+  "initialPurchases": []
+}
+

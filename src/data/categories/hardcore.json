@@ -1,0 +1,14 @@
+{
+  "name": "hardcore",
+  "description": "Bake 1 billion cookies with no upgrades",
+  "version": "v2052",
+  "targetCookies": "1 * 10**9",
+  "defaultPlayerCps": 8,
+  "defaultPlayerDelay": 1,
+  "hardcoreMode": true,
+  "initialBuildings": {},
+  "initialCookies": null,
+  "initialTime": null,
+  "initialPurchases": []
+}
+

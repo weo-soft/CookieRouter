@@ -1,0 +1,16 @@
+{
+  "name": "longhaul",
+  "description": "Route to the first optimal ascension for long-term playthrough.",
+  "version": "v2052",
+  "targetCookies": "1000 * 10**24",
+  "defaultPlayerCps": 8,
+  "defaultPlayerDelay": 1,
+  "hardcoreMode": false,
+  "initialBuildings": {},
+  "initialCookies": null,
+  "initialTime": null,
+  "initialPurchases": [
+    "Cursor"
+  ]
+}
+

@@ -1,0 +1,25 @@
+{
+  "name": "fledgling",
+  "description": "The generic speedrun to 1 million cookies baked",
+  "version": "v2052",
+  "targetCookies": "1 * 10**6",
+  "defaultPlayerCps": 8,
+  "defaultPlayerDelay": 1,
+  "hardcoreMode": false,
+  "initialBuildings": {},
+  "initialCookies": null,
+  "initialTime": null,
+  "initialPurchases": [
+    "Cursor",
+    "Cursor",
+    "Cursor",
+    "Cursor",
+    "Cursor",
+    "Cursor",
+    "Cursor",
+    "Cursor",
+    "Cursor",
+    "Cursor"
+  ]
+}
+

@@ -1,0 +1,14 @@
+{
+  "name": "short",
+  "description": "A short speedrun for testing purposes",
+  "version": "v2052",
+  "targetCookies": 1000,
+  "defaultPlayerCps": 8,
+  "defaultPlayerDelay": 1,
+  "hardcoreMode": false,
+  "initialBuildings": {},
+  "initialCookies": null,
+  "initialTime": null,
+  "initialPurchases": []
+}
+

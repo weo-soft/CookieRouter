@@ -4,9 +4,12 @@
  */
 
 import { getCategories, deleteCategory } from '../storage.js';
-import { short, fledgling, neverclick, hardcore } from '../categories.js';
+import { categories } from '../categories.js';
 import { formatNumber as formatNumberUtil } from '../utils/format.js';
 import { renderNumberInputWithMultiplier, getNumberInputWithMultiplierValue } from '../utils/number-input.js';
+
+// Import category JSON files to get their configurations
+const categoryConfigs = import.meta.glob('../../data/categories/*.json', { eager: true });
 
 export class CategorySelector {
   constructor(containerId, onSelect, options = {}) {
@@ -30,97 +33,81 @@ export class CategorySelector {
   }
 
   /**
+   * Evaluate a targetCookies expression (supports both numbers and string expressions)
+   */
+  evaluateTargetCookies(value) {
+    if (typeof value === 'number') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      // Safe evaluation of mathematical expressions
+      if (/^[\d\s*+\-/().\s]+$/.test(value)) {
+        try {
+          return new Function('return ' + value)();
+        } catch (e) {
+          console.error(`Error evaluating targetCookies expression: ${value}`, e);
+          return 0;
+        }
+      }
+    }
+    return 0;
+  }
+
+  /**
    * Load categories from storage and predefined list
    */
   async loadCategories() {
-    // Get predefined categories
-    const predefined = [
-      {
-        id: 'predefined-short',
-        name: 'Short (Test)',
-        isPredefined: true,
-        version: 'v2048',
-        targetCookies: 1000,
-        playerCps: 8,
-        playerDelay: 1,
-        hardcoreMode: false
-      },
-      {
-        id: 'predefined-fledgling',
-        name: 'Fledgling',
-        isPredefined: true,
-        version: 'v2048',
-        targetCookies: 1000000,
-        playerCps: 8,
-        playerDelay: 1,
-        hardcoreMode: false
-      },
-      {
-        id: 'predefined-neverclick',
-        name: 'Neverclick',
-        isPredefined: true,
-        version: 'v2048',
-        targetCookies: 1000000,
-        playerCps: 0,
-        playerDelay: 0,
-        hardcoreMode: false
-      },
-      {
-        id: 'predefined-hardcore',
-        name: 'Hardcore',
-        isPredefined: true,
-        version: 'v2048',
-        targetCookies: 1000000000,
-        playerCps: 8,
-        playerDelay: 1,
-        hardcoreMode: true
-      },
-      {
-        id: 'predefined-forty',
-        name: 'Forty',
-        isPredefined: true,
-        version: 'v10466',
-        targetCookies: 30 * 1000000, // 30 million
-        playerCps: 8,
-        playerDelay: 1,
-        hardcoreMode: false
-      },
-      {
-        id: 'predefined-forty-holiday',
-        name: 'Forty Holiday',
-        isPredefined: true,
-        version: 'v10466_xmas',
-        targetCookies: 4 * 1000000, // 4 million
-        playerCps: 8,
-        playerDelay: 1,
-        hardcoreMode: false
-      },
-      {
-        id: 'predefined-longhaul',
-        name: 'Longhaul',
-        isPredefined: true,
-        version: 'v2048',
-        targetCookies: 1000 * Math.pow(10, 24), // 1000 septillion
-        playerCps: 8,
-        playerDelay: 1,
-        hardcoreMode: false
-      },
-      {
-        id: 'predefined-nevercore',
-        name: 'Nevercore',
-        isPredefined: true,
-        version: 'v2048',
-        targetCookies: 1000000,
-        playerCps: 0.0001,
-        playerDelay: 0,
-        hardcoreMode: true
+    // Load predefined categories from JSON files
+    const predefined = [];
+    
+    for (const [path, module] of Object.entries(categoryConfigs)) {
+      const config = module.default || module;
+      
+      // Skip if config is missing required fields
+      if (!config.name) {
+        console.warn(`Category file ${path} is missing a 'name' field, skipping.`);
+        continue;
       }
-    ];
+      
+      // Convert JSON config to category format expected by the UI
+      const categoryName = config.name;
+      const displayName = this.getCategoryDisplayName(categoryName);
+      const targetCookies = this.evaluateTargetCookies(config.targetCookies);
+      
+      predefined.push({
+        id: `predefined-${categoryName}`,
+        name: displayName,
+        isPredefined: true,
+        version: config.version,
+        targetCookies: targetCookies,
+        playerCps: config.defaultPlayerCps,
+        playerDelay: config.defaultPlayerDelay,
+        hardcoreMode: config.hardcoreMode || false
+      });
+    }
 
     // Get user-created categories
     const userCategories = getCategories().filter(c => !c.isPredefined);
 
     this.categories = [...predefined, ...userCategories];
+  }
+
+  /**
+   * Get display name for a category based on its internal name
+   */
+  getCategoryDisplayName(categoryName) {
+    const displayNameMap = {
+      'short': 'Short (Test)',
+      'fledgling': 'Fledgling',
+      'neverclick': 'Neverclick',
+      'hardcore': 'Hardcore',
+      'forty': 'Forty',
+      'fortyHoliday': 'Forty Holiday',
+      'longhaul': 'Longhaul',
+      'nevercore': 'Nevercore'
+    };
+    
+    return displayNameMap[categoryName] || categoryName.charAt(0).toUpperCase() + categoryName.slice(1);
   }
 
   /**
