@@ -6,6 +6,7 @@
 import { getProgress, saveProgress, updateProgress, clearProgress } from '../storage.js';
 import { getAchievementById } from '../utils/achievements.js';
 import { formatNumber } from '../utils/format.js';
+import { exportRoute, detectRouteType } from './route-export.js';
 
 export class RouteDisplay {
   constructor(containerId, onSaveRoute = null) {
@@ -189,6 +190,7 @@ export class RouteDisplay {
           <div class="route-header-actions">
             ${completedCount > 0 ? `<button id="reset-progress-btn" class="btn-secondary" aria-label="Reset all progress">Reset</button>` : ''}
             ${this.onSaveRoute && !this.isSavedRoute ? `<button id="save-route-btn" class="btn-primary" aria-label="Save this route">Save Route</button>` : ''}
+            <button id="export-route-btn" class="btn-secondary" aria-label="Export this route">Export</button>
           </div>
         </div>
         <div class="route-meta">
@@ -326,6 +328,45 @@ export class RouteDisplay {
       saveBtn.addEventListener('click', () => {
         if (this.onSaveRoute) {
           this.onSaveRoute(this.currentRoute, this.currentCategory, this.currentVersionId);
+        }
+      });
+    }
+
+    // Attach export route button listener
+    const exportBtn = this.container.querySelector('#export-route-btn');
+    if (exportBtn && this.currentRoute) {
+      exportBtn.addEventListener('click', () => {
+        try {
+          // Determine route type and name
+          let routeType;
+          let routeName;
+
+          if (this.currentRoute.achievementIds && this.currentRoute.achievementIds.length > 0) {
+            routeType = 'achievementRoute';
+            routeName = `Achievement Route (${this.currentRoute.achievementIds.join(', ')})`;
+          } else {
+            routeType = 'calculatedRoute';
+            routeName = this.currentCategory?.name || 'Calculated Route';
+          }
+
+          // Prepare route data for export
+          const routeData = {
+            categoryId: this.currentCategory?.id,
+            categoryName: this.currentCategory?.name,
+            versionId: this.currentVersionId || 'v2052',
+            buildings: this.currentRoute.buildings,
+            algorithm: this.currentRoute.algorithm,
+            lookahead: this.currentRoute.lookahead,
+            completionTime: this.currentRoute.completionTime,
+            startingBuildings: this.currentRoute.startingBuildings || {},
+            calculatedAt: Date.now(),
+            achievementIds: this.currentRoute.achievementIds
+          };
+
+          exportRoute(routeData, routeType, routeName);
+        } catch (error) {
+          console.error('Failed to export route:', error);
+          alert(`Failed to export route: ${error.message}`);
         }
       });
     }

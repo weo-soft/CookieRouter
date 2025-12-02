@@ -4179,3 +4179,541 @@ main {
   }
 }
 
+/* Route Import/Export Styles */
+
+.import-preview {
+  background: white;
+  border: 2px solid #4a90e2;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.import-preview h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  border-bottom: 2px solid #4a90e2;
+  padding-bottom: 10px;
+}
+
+.preview-info {
+  margin: 15px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.preview-info p {
+  margin: 5px 0;
+  color: #555;
+}
+
+.preview-route-details {
+  margin: 15px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 4px solid #4a90e2;
+}
+
+.preview-route-details p {
+  margin: 8px 0;
+  color: #333;
+}
+
+.preview-warnings {
+  margin: 15px 0;
+  padding: 15px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  border-left: 4px solid #ffc107;
+}
+
+.preview-warnings h4 {
+  margin-top: 0;
+  color: #856404;
+}
+
+.preview-warnings ul {
+  margin: 10px 0 0 20px;
+  color: #856404;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ddd;
+}
+
+.import-errors {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 15px;
+  margin: 20px 0;
+  border-left: 4px solid #dc3545;
+}
+
+.import-errors h4 {
+  margin-top: 0;
+  color: #721c24;
+}
+
+.import-errors ul {
+  margin: 10px 0;
+  padding-left: 20px;
+  color: #721c24;
+}
+
+.import-errors li {
+  margin: 5px 0;
+}
+
+.btn-export-route {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.route-chain-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Route Export Dialog Styles */
+.route-export-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-in;
+}
+
+.route-export-dialog {
+  background: white;
+  border-radius: 8px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+  overflow: hidden;
+}
+
+.route-export-dialog .dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.route-export-dialog .dialog-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+}
+
+.route-export-dialog .dialog-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.route-export-dialog .dialog-close-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.route-export-dialog .dialog-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.route-export-dialog .export-info {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #4a90e2;
+}
+
+.route-export-dialog .export-info p {
+  margin: 8px 0;
+  color: #333;
+}
+
+.route-export-dialog .export-data-container {
+  margin-top: 20px;
+}
+
+.route-export-dialog .export-data-container label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.route-export-dialog .export-data-textarea {
+  width: 100%;
+  min-height: 200px;
+  max-height: 400px;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  background: #f8f9fa;
+  color: #333;
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.route-export-dialog .export-data-textarea:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+  background: white;
+}
+
+.route-export-dialog .help-text {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 8px;
+}
+
+.route-export-dialog .dialog-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.route-export-dialog .dialog-footer button {
+  min-width: 120px;
+}
+
+.route-export-dialog .dialog-footer button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive design for export dialog */
+@media (max-width: 768px) {
+  .route-export-dialog {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .route-export-dialog .dialog-content {
+    padding: 16px;
+  }
+
+  .route-export-dialog .dialog-footer {
+    flex-direction: column;
+  }
+
+  .route-export-dialog .dialog-footer button {
+    width: 100%;
+  }
+}
+
+/* Route Import Dialog Styles */
+.route-import-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-in;
+}
+
+.route-import-dialog {
+  background: white;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+  overflow: hidden;
+}
+
+.route-import-dialog .dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.route-import-dialog .dialog-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+}
+
+.route-import-dialog .dialog-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.route-import-dialog .dialog-close-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.route-import-dialog .dialog-content {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.route-import-dialog .import-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.route-import-dialog .import-option {
+  flex: 1;
+}
+
+.route-import-dialog .import-option h3 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.route-import-dialog .import-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 4px 0;
+  position: relative;
+}
+
+.route-import-dialog .import-divider::before,
+.route-import-dialog .import-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.route-import-dialog .import-divider span {
+  padding: 0 12px;
+  color: #666;
+  font-weight: 500;
+  font-size: 0.9rem;
+  background: white;
+}
+
+.route-import-dialog .import-instructions {
+  margin-bottom: 12px;
+}
+
+.route-import-dialog .import-instructions p {
+  color: #666;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.route-import-dialog .import-data-container {
+  margin-bottom: 12px;
+}
+
+.route-import-dialog .import-data-container label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.route-import-dialog .import-data-textarea {
+  width: 100%;
+  min-height: 120px;
+  max-height: 250px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  resize: vertical;
+  background: white;
+  color: #333;
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.route-import-dialog .import-data-textarea:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.route-import-dialog .import-file-container {
+  margin-bottom: 12px;
+}
+
+.route-import-dialog .import-file-container input[type="file"] {
+  display: none;
+}
+
+.route-import-dialog .file-input-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f8f9fa;
+}
+
+.route-import-dialog .file-input-label:hover {
+  border-color: #4a90e2;
+  background: #f0f7ff;
+}
+
+.route-import-dialog .file-input-button {
+  padding: 6px 12px;
+  background: #4a90e2;
+  color: white;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.route-import-dialog .file-input-label:hover .file-input-button {
+  background: #357abd;
+}
+
+.route-import-dialog .file-input-name {
+  color: #666;
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.route-import-dialog .help-text {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.route-import-dialog .import-actions {
+  margin-top: 10px;
+}
+
+.route-import-dialog .import-actions button {
+  min-width: 140px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.route-import-dialog .import-error-container {
+  margin-top: 12px;
+  min-height: 0;
+}
+
+.route-import-dialog .import-error {
+  padding: 12px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  border-left: 4px solid #dc3545;
+  color: #721c24;
+  font-size: 0.9rem;
+}
+
+.route-import-dialog .import-error ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.route-import-dialog .import-error li {
+  margin: 5px 0;
+}
+
+.route-import-dialog .dialog-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Responsive design for import dialog */
+@media (max-width: 768px) {
+  .route-import-dialog {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .route-import-dialog .dialog-content {
+    padding: 12px 16px;
+  }
+
+  .route-import-dialog .import-options {
+    gap: 14px;
+  }
+
+  .route-import-dialog .dialog-footer {
+    flex-direction: column;
+    padding: 10px 16px;
+  }
+
+  .route-import-dialog .dialog-footer button {
+    width: 100%;
+  }
+}
+

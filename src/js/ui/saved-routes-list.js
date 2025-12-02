@@ -5,6 +5,7 @@
 
 import { getSavedRoutes, getSavedRouteById, updateLastAccessed, updateSavedRouteName, deleteSavedRoute } from '../storage.js';
 import { formatNumber } from '../utils/format.js';
+import { exportRoute } from './route-export.js';
 
 export class SavedRoutesList {
   constructor(containerId, onSelectRoute) {
@@ -22,6 +23,12 @@ export class SavedRoutesList {
   async init() {
     this.loadSavedRoutes();
     this.render();
+    
+    // Listen for refresh events (e.g., after importing a route)
+    window.addEventListener('refreshSavedRoutes', () => {
+      this.loadSavedRoutes();
+      this.render();
+    });
   }
 
   /**
@@ -158,6 +165,12 @@ export class SavedRoutesList {
                   title="Load route">
             Load
           </button>
+          <button class="btn-export-route" 
+                  data-route-id="${this.escapeHtml(route.id)}"
+                  aria-label="Export route ${this.escapeHtml(route.name)}"
+                  title="Export route">
+            Export
+          </button>
           <button class="btn-rename-route" 
                   data-route-id="${this.escapeHtml(route.id)}"
                   aria-label="Rename route ${this.escapeHtml(route.name)}"
@@ -185,6 +198,23 @@ export class SavedRoutesList {
         e.stopPropagation();
         const routeId = e.target.dataset.routeId;
         this.selectRoute(routeId);
+      });
+    });
+
+    // Export route buttons
+    this.container.querySelectorAll('.btn-export-route').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const routeId = e.target.dataset.routeId;
+        const route = getSavedRouteById(routeId);
+        if (route) {
+          try {
+            exportRoute(route, 'savedRoute', route.name);
+          } catch (error) {
+            console.error('Failed to export route:', error);
+            alert(`Failed to export route: ${error.message}`);
+          }
+        }
       });
     });
 
