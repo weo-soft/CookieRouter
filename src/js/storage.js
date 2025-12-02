@@ -4,6 +4,7 @@
  */
 
 import { logStorageInfo } from './utils/storage-analysis.js';
+import { validateRouteChain } from './utils/route-chain-validator.js';
 
 const STORAGE_PREFIX = 'cookieRouter:';
 
@@ -459,5 +460,225 @@ export function clearImportedSaveGameFromStorage() {
   } catch (error) {
     console.error('Error clearing imported save game from localStorage:', error);
   }
+}
+
+/**
+ * Get all route chains from localStorage
+ * @returns {Array} Array of RouteChain objects, empty array if none exist or on error
+ */
+export function getRouteChains() {
+  try {
+    const data = localStorage.getItem(STORAGE_PREFIX + 'routeChains');
+    if (!data) return [];
+    const routeChains = JSON.parse(data);
+    
+    // Validate that it's an array
+    if (!Array.isArray(routeChains)) {
+      console.warn('Route chains data is not an array, resetting to empty array');
+      try {
+        localStorage.removeItem(STORAGE_PREFIX + 'routeChains');
+      } catch (e) {
+        console.error('Error clearing corrupted route chains data:', e);
+      }
+      return [];
+    }
+    
+    // Filter out invalid chains and log warnings
+    const validChains = routeChains.filter((chain, index) => {
+      try {
+        const validation = validateRouteChain(chain);
+        if (!validation.isValid) {
+          console.warn(`Invalid route chain at index ${index}, skipping:`, validation.errors.join(', '));
+          return false;
+        }
+        return true;
+      } catch (error) {
+        console.warn(`Error validating route chain at index ${index}, skipping:`, error.message);
+        return false;
+      }
+    });
+    
+    // If we filtered out invalid chains, save the cleaned data
+    if (validChains.length !== routeChains.length) {
+      try {
+        localStorage.setItem(STORAGE_PREFIX + 'routeChains', JSON.stringify(validChains));
+        console.info(`Cleaned route chains: removed ${routeChains.length - validChains.length} invalid chain(s)`);
+      } catch (e) {
+        console.error('Error saving cleaned route chains:', e);
+      }
+    }
+    
+    return validChains;
+  } catch (error) {
+    console.error('Error reading route chains from localStorage:', error);
+    // Try to recover by clearing corrupted data
+    try {
+      localStorage.removeItem(STORAGE_PREFIX + 'routeChains');
+      console.info('Cleared corrupted route chains data');
+    } catch (e) {
+      console.error('Error clearing corrupted route chains data:', e);
+    }
+    return [];
+  }
+}
+
+/**
+ * Save a route chain to localStorage
+ * @param {Object} routeChain - RouteChain object to save
+ * @throws {Error} If localStorage quota exceeded or validation fails
+ */
+export function saveRouteChain(routeChain) {
+  // Validate route chain
+  const validation = validateRouteChain(routeChain);
+  if (!validation.isValid) {
+    throw new Error(`Route chain validation failed: ${validation.errors.join(', ')}`);
+  }
+  
+  // Generate ID if not provided
+  if (!routeChain.id) {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 9);
+    routeChain.id = `route-chain-${timestamp}-${random}`;
+  }
+  
+  // Set timestamps if not provided
+  const now = Date.now();
+  if (!routeChain.createdAt) {
+    routeChain.createdAt = now;
+  }
+  if (!routeChain.savedAt) {
+    routeChain.savedAt = now;
+  }
+  if (!routeChain.lastAccessedAt) {
+    routeChain.lastAccessedAt = now;
+  }
+  
+  // Ensure overallProgress is set correctly
+  if (!routeChain.overallProgress) {
+    routeChain.overallProgress = {
+      totalRoutes: routeChain.routes.length,
+      completedRoutes: 0,
+      inProgressRouteIndex: null
+    };
+  } else {
+    // Update totalRoutes to match routes.length
+    routeChain.overallProgress.totalRoutes = routeChain.routes.length;
+  }
+  
+  try {
+    const routeChains = getRouteChains();
+    const index = routeChains.findIndex(c => c.id === routeChain.id);
+    if (index >= 0) {
+      routeChains[index] = routeChain;
+    } else {
+      routeChains.push(routeChain);
+    }
+    localStorage.setItem(STORAGE_PREFIX + 'routeChains', JSON.stringify(routeChains));
+  } catch (error) {
+    if (error.name === 'QuotaExceededError') {
+      throw new Error('localStorage quota exceeded. Please delete old route chains.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get a route chain by ID
+ * @param {string} chainId - ID of route chain to retrieve
+ * @returns {Object|null} RouteChain object or null if not found
+ */
+export function getRouteChainById(chainId) {
+  try {
+    const routeChains = getRouteChains();
+    return routeChains.find(c => c.id === chainId) || null;
+  } catch (error) {
+    console.error('Error getting route chain by ID:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete a route chain from localStorage by ID
+ * @param {string} chainId - ID of route chain to delete
+ */
+export function deleteRouteChain(chainId) {
+  try {
+    const routeChains = getRouteChains();
+    const filtered = routeChains.filter(c => c.id !== chainId);
+    localStorage.setItem(STORAGE_PREFIX + 'routeChains', JSON.stringify(filtered));
+    
+    // Also delete associated progress for each route in the chain
+    const chain = routeChains.find(c => c.id === chainId);
+    if (chain && chain.routes) {
+      chain.routes.forEach((route, index) => {
+        // Progress is stored per route using chainId-routeIndex format
+        const progressId = `${chainId}-${index}`;
+        clearProgress(progressId);
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting route chain:', error);
+  }
+}
+
+/**
+ * Update the lastAccessedAt timestamp for a route chain
+ * @param {string} chainId - ID of route chain to update
+ * @throws {Error} If chainId doesn't exist
+ */
+export function updateRouteChainLastAccessed(chainId) {
+  const routeChain = getRouteChainById(chainId);
+  if (!routeChain) {
+    throw new Error(`Route chain with ID ${chainId} not found`);
+  }
+  routeChain.lastAccessedAt = Date.now();
+  saveRouteChain(routeChain);
+}
+
+/**
+ * Update progress for a specific route in a chain
+ * @param {string} chainId - ID of route chain
+ * @param {number} routeIndex - Index of route in chain (0-based)
+ * @param {Object} progress - Progress data (map of step order to checked state)
+ * @param {number} completedSteps - Count of completed steps
+ * @param {boolean} isComplete - Whether route is complete
+ * @throws {Error} If chainId doesn't exist or routeIndex is invalid
+ */
+export function updateRouteChainProgress(chainId, routeIndex, progress, completedSteps, isComplete) {
+  const routeChain = getRouteChainById(chainId);
+  if (!routeChain) {
+    throw new Error(`Route chain with ID ${chainId} not found`);
+  }
+  
+  if (routeIndex < 0 || routeIndex >= routeChain.routes.length) {
+    throw new Error(`Invalid route index ${routeIndex} for chain with ${routeChain.routes.length} routes`);
+  }
+  
+  // Update the route's progress
+  const route = routeChain.routes[routeIndex];
+  route.progress = progress;
+  route.completedSteps = completedSteps;
+  route.isComplete = isComplete;
+  
+  // Update overall progress
+  if (!routeChain.overallProgress) {
+    routeChain.overallProgress = {
+      totalRoutes: routeChain.routes.length,
+      completedRoutes: 0,
+      inProgressRouteIndex: null
+    };
+  }
+  
+  // Count completed routes
+  routeChain.overallProgress.completedRoutes = routeChain.routes.filter(r => r.isComplete).length;
+  
+  // Update inProgressRouteIndex
+  const inProgressIndex = routeChain.routes.findIndex(r => !r.isComplete && r.completedSteps > 0);
+  routeChain.overallProgress.inProgressRouteIndex = inProgressIndex >= 0 ? inProgressIndex : null;
+  
+  // Update lastAccessedAt
+  routeChain.lastAccessedAt = Date.now();
+  
+  saveRouteChain(routeChain);
 }
 

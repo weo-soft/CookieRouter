@@ -6,6 +6,7 @@
 import { Router } from './router.js';
 import { getImportedSaveGame } from './save-game-importer.js';
 import { getAchievementRequirement } from '../data/achievement-requirements.js';
+import { extractFinalStateFromRoute } from './utils/route-state-extractor.js';
 
 /**
  * Calculates the optimal building purchase route for a given category
@@ -444,6 +445,199 @@ export async function calculateRoute(category, startingBuildings = {}, options =
 
   return route;
 }
+
+/**
+ * @typedef {object} ChainCalculationProgress
+ * @property {number} currentRouteIndex - Index of route currently being calculated.
+ * @property {number} totalRoutes - Total number of routes in chain.
+ * @property {string} routeName - Name of current route.
+ * @property {object} [routeProgress] - Progress for current route (from calculateRoute).
+ */
+
+/**
+ * Calculate a route chain - calculates all routes sequentially with building progression
+ * @param {Object} chainConfig - Chain configuration
+ *   - routes: Array of route configurations (categories or achievement routes)
+ *   - versionId: Default game version ID (optional, default: 'v2052')
+ * @param {Object} initialStartingBuildings - Initial starting buildings (from wizard or import)
+ * @param {Array} initialStartingUpgrades - Initial starting upgrades (from wizard or import)
+ * @param {Object} options - Calculation options
+ *   - algorithm: 'GPL' or 'DFS' (default: 'GPL')
+ *   - lookahead: number (default: 1)
+ *   - onProgress: function(progress: ChainCalculationProgress) - Progress callback
+ * @returns {Promise<Object>} ChainCalculationResult
+ */
+export async function calculateRouteChain(chainConfig, initialStartingBuildings = {}, initialStartingUpgrades = [], options = {}) {
+  const {
+    algorithm = 'GPL',
+    lookahead = 1,
+    onProgress = null
+  } = options;
+
+  const routes = chainConfig.routes || [];
+  const defaultVersionId = chainConfig.versionId || 'v2052';
+
+  if (!routes || routes.length === 0) {
+    return {
+      success: false,
+      calculatedRoutes: [],
+      accumulatedBuildings: initialStartingBuildings,
+      accumulatedUpgrades: initialStartingUpgrades,
+      errors: [{
+        routeIndex: -1,
+        routeName: 'Chain Configuration',
+        message: 'No routes specified in chain configuration',
+        timestamp: Date.now()
+      }]
+    };
+  }
+
+  // Initialize accumulation state
+  let accumulatedBuildings = { ...initialStartingBuildings };
+  let accumulatedUpgrades = [...initialStartingUpgrades];
+  const calculatedRoutes = [];
+  const errors = [];
+
+  // Calculate each route sequentially
+  for (let i = 0; i < routes.length; i++) {
+    const routeConfig = routes[i];
+    const routeName = routeConfig.type === 'category'
+      ? (routeConfig.categoryName || routeConfig.categoryId || `Route ${i + 1}`)
+      : `Achievement Route (${routeConfig.achievementIds?.join(', ') || 'Unknown'})`;
+
+    // Report progress
+    if (onProgress) {
+      await onProgress({
+        currentRouteIndex: i,
+        totalRoutes: routes.length,
+        routeName: routeName,
+        routeProgress: null
+      });
+    }
+
+    try {
+      // Create category object for calculateRoute
+      let category;
+      if (routeConfig.type === 'category') {
+        // Find the category (predefined or custom)
+        const { getCategoryById } = await import('./storage.js');
+        const storedCategory = getCategoryById(routeConfig.categoryId);
+        
+        if (storedCategory) {
+          category = {
+            id: storedCategory.id,
+            name: storedCategory.name,
+            isPredefined: storedCategory.isPredefined,
+            version: storedCategory.version || routeConfig.versionId || defaultVersionId,
+            targetCookies: storedCategory.targetCookies,
+            playerCps: storedCategory.playerCps || 8,
+            playerDelay: storedCategory.playerDelay || 1,
+            hardcoreMode: storedCategory.hardcoreMode || routeConfig.hardcoreMode || false,
+            initialBuildings: storedCategory.initialBuildings || {}
+          };
+        } else {
+          // Predefined category - create from config
+          category = {
+            id: routeConfig.categoryId,
+            name: routeConfig.categoryName || routeConfig.categoryId,
+            isPredefined: true,
+            version: routeConfig.versionId || defaultVersionId,
+            targetCookies: 0, // Will be set by category function
+            playerCps: 8,
+            playerDelay: 1,
+            hardcoreMode: routeConfig.hardcoreMode || false
+          };
+        }
+      } else if (routeConfig.type === 'achievement') {
+        // Achievement route
+        category = {
+          id: `achievement-route-${i}`,
+          name: `Achievement Route (${routeConfig.achievementIds.join(', ')})`,
+          isPredefined: false,
+          version: routeConfig.versionId || defaultVersionId,
+          achievementIds: routeConfig.achievementIds,
+          hardcoreMode: routeConfig.hardcoreMode || false
+        };
+      } else {
+        throw new Error(`Unknown route type: ${routeConfig.type}`);
+      }
+
+      // Calculate route with accumulated state
+      const routeOptions = {
+        algorithm: algorithm,
+        lookahead: lookahead,
+        manualUpgrades: accumulatedUpgrades,
+        onProgress: (routeProgress) => {
+          // Forward route-level progress if callback provided
+          if (onProgress) {
+            onProgress({
+              currentRouteIndex: i,
+              totalRoutes: routes.length,
+              routeName: routeName,
+              routeProgress: routeProgress
+            });
+          }
+        }
+      };
+
+      const versionId = routeConfig.versionId || defaultVersionId;
+      const calculatedRoute = await calculateRoute(category, accumulatedBuildings, routeOptions, versionId);
+
+      // Extract final state from this route
+      const finalState = extractFinalStateFromRoute(calculatedRoute, accumulatedBuildings, accumulatedUpgrades);
+
+      // Update accumulated state for next route
+      accumulatedBuildings = finalState.buildings;
+      accumulatedUpgrades = finalState.upgrades;
+
+      // Store calculated route
+      calculatedRoutes.push(calculatedRoute);
+
+    } catch (error) {
+      // Error calculating this route - stop chain calculation
+      errors.push({
+        routeIndex: i,
+        routeName: routeName,
+        message: error.message || 'Unknown error during route calculation',
+        timestamp: Date.now()
+      });
+
+      // Return partial results
+      return {
+        success: false,
+        calculatedRoutes: calculatedRoutes,
+        accumulatedBuildings: accumulatedBuildings,
+        accumulatedUpgrades: accumulatedUpgrades,
+        errors: errors
+      };
+    }
+  }
+
+  // All routes calculated successfully
+  return {
+    success: true,
+    calculatedRoutes: calculatedRoutes,
+    accumulatedBuildings: accumulatedBuildings,
+    accumulatedUpgrades: accumulatedUpgrades,
+    errors: []
+  };
+}
+
+/**
+ * Chain Calculation State
+ * Tracks state during chain calculation (in-memory only)
+ * @typedef {Object} ChainCalculationState
+ * @property {string} [chainId] - ID of chain being calculated (if saving)
+ * @property {number} currentRouteIndex - Zero-based index of route currently being calculated
+ * @property {number} totalRoutes - Total number of routes in chain
+ * @property {Object} accumulatedBuildings - Buildings accumulated from all previous routes
+ * @property {string[]} accumulatedUpgrades - Upgrades accumulated from all previous routes
+ * @property {Object[]} calculatedRoutes - Array of calculated route results (one per completed route)
+ * @property {Array} errors - Array of calculation errors encountered
+ * @property {boolean} isCalculating - Whether calculation is currently in progress
+ * @property {boolean} isComplete - Whether all routes have been calculated successfully
+ * @property {boolean} isFailed - Whether calculation failed (stopped due to error)
+ */
 
 /**
  * Sets achievement goals on a game instance based on achievement IDs

@@ -77,7 +77,24 @@ export class WizardSummary {
     // Step 2 summary
     html += '<div class="summary-item">';
     html += '<h3>Category</h3>';
-    if (step2Data.categoryConfig) {
+    if (step2Data.categoryType === 'chain' && step2Data.selectedRoutes && step2Data.selectedRoutes.length > 0) {
+      html += `<p>Route Chain (${step2Data.selectedRoutes.length} routes)</p>`;
+      html += '<ul class="chain-summary-list">';
+      step2Data.selectedRoutes.forEach((route, index) => {
+        const routeName = route.routeConfig.type === 'category'
+          ? (route.routeConfig.categoryName || route.routeConfig.categoryId || `Route ${index + 1}`)
+          : `Achievement Route (${route.routeConfig.achievementIds?.join(', ') || 'Unknown'})`;
+        html += `<li>${index + 1}. ${this.escapeHtml(routeName)}</li>`;
+      });
+      html += '</ul>';
+      // Show version if all routes use the same version
+      const versions = [...new Set(step2Data.selectedRoutes.map(r => r.routeConfig.versionId).filter(Boolean))];
+      if (versions.length === 1) {
+        html += `<p class="summary-detail">Version: ${versions[0]}</p>`;
+      } else if (versions.length > 1) {
+        html += `<p class="summary-detail">Versions: ${versions.join(', ')}</p>`;
+      }
+    } else if (step2Data.categoryConfig) {
       html += `<p>${step2Data.categoryConfig.name || 'Unnamed Category'}</p>`;
       html += `<p class="summary-detail">Target: ${this.formatNumber(step2Data.categoryConfig.targetCookies)} cookies</p>`;
       html += `<p class="summary-detail">Version: ${step2Data.categoryConfig.version || 'N/A'}</p>`;
@@ -101,13 +118,35 @@ export class WizardSummary {
   }
 
   /**
+   * Escape HTML to prevent XSS
+   * @param {string} text - Text to escape
+   * @returns {string} Escaped text
+   */
+  escapeHtml(text) {
+    if (typeof text !== 'string') {
+      return String(text);
+    }
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  /**
    * Check if route can be calculated
    * @returns {boolean} True if calculation is possible
    */
   canCalculate() {
     if (!this.wizardState) return false;
     const { step1Data, step2Data } = this.wizardState;
-    return step1Data.setupChoice && step2Data.categoryConfig;
+    if (!step1Data.setupChoice) return false;
+    
+    // For chain mode, check selectedRoutes
+    if (step2Data.categoryType === 'chain') {
+      return step2Data.selectedRoutes && step2Data.selectedRoutes.length > 0;
+    }
+    
+    // For other modes, check categoryConfig
+    return step2Data.categoryConfig;
   }
 
   /**
@@ -136,12 +175,20 @@ export class WizardSummary {
    * @returns {string} Calculating HTML
    */
   renderCalculating() {
+    const isChain = this.wizardState?.step2Data?.categoryType === 'chain';
     return `
       <div class="calculating-indicator">
         <div class="spinner"></div>
-        <p>Calculating optimal route...</p>
+        <p>${isChain ? 'Calculating route chain...' : 'Calculating optimal route...'}</p>
         <div class="calculation-progress" id="calculation-progress">
-          <p id="progress-text">Processing moves...</p>
+          ${isChain ? `
+            <div class="chain-progress-container">
+              <div class="chain-progress-bar">
+                <div class="chain-progress-fill" id="chain-progress-bar" style="width: 0%"></div>
+              </div>
+            </div>
+          ` : ''}
+          <p id="progress-text">${isChain ? 'Starting chain calculation...' : 'Processing moves...'}</p>
         </div>
       </div>
     `;
@@ -156,6 +203,33 @@ export class WizardSummary {
       const progressText = this.container.querySelector('#progress-text');
       if (progressText) {
         progressText.textContent = `Processing moves: ${moves}`;
+      }
+    }
+  }
+
+  /**
+   * Update chain calculation progress
+   * @param {string} progressText - Progress text to display
+   * @param {number} currentRouteIndex - Current route index (0-based)
+   * @param {number} totalRoutes - Total number of routes
+   * @param {Object} routeProgress - Optional route-level progress (with moves count)
+   */
+  updateChainProgress(progressText, currentRouteIndex, totalRoutes, routeProgress = null) {
+    if (this.isCalculating) {
+      const progressElement = this.container.querySelector('#progress-text');
+      if (progressElement) {
+        let displayText = progressText;
+        // Add step count if available
+        if (routeProgress && routeProgress.moves !== undefined) {
+          displayText += ` (${routeProgress.moves} steps)`;
+        }
+        progressElement.textContent = displayText;
+      }
+      // Update progress bar if it exists
+      const progressBar = this.container.querySelector('#chain-progress-bar');
+      if (progressBar) {
+        const progress = ((currentRouteIndex + 1) / totalRoutes) * 100;
+        progressBar.style.width = `${progress}%`;
       }
     }
   }
