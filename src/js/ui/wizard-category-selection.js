@@ -5,6 +5,7 @@
 
 import { CategorySelector } from './category-selector.js';
 import { CustomCategoryForm } from './custom-category-form.js';
+import { WizardAchievementSelection } from './wizard-achievement-selection.js';
 import { getCategories } from '../storage.js';
 
 export class WizardCategorySelection {
@@ -13,14 +14,17 @@ export class WizardCategorySelection {
     this.state = initialState || {
       categoryType: null,
       selectedCategoryId: null,
-      categoryConfig: null
+      categoryConfig: null,
+      achievementIds: null
     };
     this.onUpdate = onUpdate;
     this.onAutoAdvance = onAutoAdvance;
     this.categorySelector = null;
     this.customCategoryForm = null;
+    this.achievementSelection = null;
     this.categorySelectorContainer = null;
     this.customFormContainer = null;
+    this.achievementSelectionContainer = null;
   }
 
   /**
@@ -33,8 +37,8 @@ export class WizardCategorySelection {
 
     this.container.innerHTML = `
       <div class="wizard-step-content">
-        <h2>Category Selection</h2>
-        <p class="step-description">Choose a predefined category or create a custom one:</p>
+        <h2>Route Type Selection</h2>
+        <p class="step-description">Choose how you want to create your route:</p>
         
         <div class="category-options">
           <div class="category-option-wrapper ${categoryType === 'predefined' ? 'expanded' : ''}" data-option="predefined">
@@ -59,6 +63,19 @@ export class WizardCategorySelection {
               </div>
             </label>
             <div class="category-option-content" id="category-content-custom" style="display: ${categoryType === 'custom' ? 'block' : 'none'};">
+              <!-- Content will be inserted here -->
+            </div>
+          </div>
+          
+          <div class="category-option-wrapper ${categoryType === 'achievement' ? 'expanded' : ''}" data-option="achievement">
+            <label class="category-option ${categoryType === 'achievement' ? 'selected' : ''}">
+              <input type="radio" name="category-type" value="achievement" ${categoryType === 'achievement' ? 'checked' : ''}>
+              <div class="option-content">
+                <strong>Achievement-based Route</strong>
+                <p>Calculate route to unlock specific achievements</p>
+              </div>
+            </label>
+            <div class="category-option-content" id="category-content-achievement" style="display: ${categoryType === 'achievement' ? 'block' : 'none'};">
               <!-- Content will be inserted here -->
             </div>
           </div>
@@ -156,14 +173,21 @@ export class WizardCategorySelection {
       if (type === 'predefined') {
         this.state.selectedCategoryId = null;
         this.state.categoryConfig = null;
+        this.state.achievementIds = null;
       } else if (type === 'custom') {
         this.state.selectedCategoryId = null;
         this.state.categoryConfig = null;
+        this.state.achievementIds = null;
+      } else if (type === 'achievement') {
+        this.state.selectedCategoryId = null;
+        this.state.categoryConfig = null;
+        // Keep achievementIds if already set
       }
     } else {
       // Deselecting - clear all category data
       this.state.selectedCategoryId = null;
       this.state.categoryConfig = null;
+      this.state.achievementIds = null;
     }
     
     await this.updateContent();
@@ -179,12 +203,14 @@ export class WizardCategorySelection {
     // Get all option wrappers and content areas using data attributes
     const predefinedWrapper = this.container.querySelector('[data-option="predefined"]');
     const customWrapper = this.container.querySelector('[data-option="custom"]');
+    const achievementWrapper = this.container.querySelector('[data-option="achievement"]');
     
     const predefinedContent = this.container.querySelector('#category-content-predefined');
     const customContent = this.container.querySelector('#category-content-custom');
+    const achievementContent = this.container.querySelector('#category-content-achievement');
 
     // Update expanded state for all wrappers
-    [predefinedWrapper, customWrapper].forEach(wrapper => {
+    [predefinedWrapper, customWrapper, achievementWrapper].forEach(wrapper => {
       if (wrapper) {
         wrapper.classList.remove('expanded');
       }
@@ -193,9 +219,11 @@ export class WizardCategorySelection {
     // Clear previous content and destroy existing components
     if (predefinedContent) predefinedContent.innerHTML = '';
     if (customContent) customContent.innerHTML = '';
+    if (achievementContent) achievementContent.innerHTML = '';
     
     this.categorySelector = null;
     this.customCategoryForm = null;
+    this.achievementSelection = null;
 
     if (categoryType === 'predefined') {
       // Expand predefined option
@@ -266,10 +294,46 @@ export class WizardCategorySelection {
         // Form will need to be populated with existing config
         // This will be handled by the form's state restoration
       }
+    } else if (categoryType === 'achievement') {
+      // Expand achievement option
+      if (achievementWrapper) achievementWrapper.classList.add('expanded');
+      if (achievementContent) achievementContent.style.display = 'block';
+
+      // Create container for achievement selection
+      this.achievementSelectionContainer = document.createElement('div');
+      this.achievementSelectionContainer.id = 'wizard-achievement-selection-container';
+      if (achievementContent) {
+        achievementContent.appendChild(this.achievementSelectionContainer);
+      }
+
+      // Create WizardAchievementSelection instance
+      this.achievementSelection = new WizardAchievementSelection(
+        'wizard-achievement-selection-container',
+        {
+          selectedAchievementIds: this.state.achievementIds || [],
+          searchQuery: '',
+          requirementTypeFilter: null,
+          routeableOnly: true
+        },
+        (state) => {
+          this.handleAchievementSelection(state);
+        }
+      );
+
+      // Render achievement selection
+      await this.achievementSelection.render();
+
+      // Restore selected achievements if navigating back
+      if (this.state.achievementIds && this.state.achievementIds.length > 0) {
+        this.achievementSelection.setState({
+          selectedAchievementIds: this.state.achievementIds
+        });
+      }
     } else {
       // No option selected - collapse all
       if (predefinedContent) predefinedContent.style.display = 'none';
       if (customContent) customContent.style.display = 'none';
+      if (achievementContent) achievementContent.style.display = 'none';
     }
   }
 
@@ -299,6 +363,28 @@ export class WizardCategorySelection {
     };
 
     // Settings are now handled inline in the expanded category item
+    this.notifyUpdate();
+  }
+
+  /**
+   * Handle achievement selection
+   * @param {Object} state - Achievement selection state
+   */
+  handleAchievementSelection(state) {
+    this.state.achievementIds = state.selectedAchievementIds || [];
+    
+    // Create category config for achievement route
+    if (this.state.achievementIds.length > 0) {
+      this.state.categoryConfig = {
+        name: `Achievement Route (${this.state.achievementIds.length} achievement${this.state.achievementIds.length !== 1 ? 's' : ''})`,
+        isPredefined: false,
+        version: 'v2052', // Default to v2052 for achievement routes
+        achievementIds: this.state.achievementIds
+      };
+    } else {
+      this.state.categoryConfig = null;
+    }
+    
     this.notifyUpdate();
   }
 

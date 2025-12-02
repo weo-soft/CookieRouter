@@ -3,6 +3,8 @@
  * Implements the storage contract from contracts/storage.md
  */
 
+import { logStorageInfo } from './utils/storage-analysis.js';
+
 const STORAGE_PREFIX = 'cookieRouter:';
 
 /**
@@ -85,11 +87,18 @@ export function getRoutes() {
 }
 
 /**
- * Save a route to localStorage
+ * Save a calculated route to localStorage (temporary storage)
+ * Note: This function is kept for backward compatibility but is not called automatically.
+ * User-saved routes should use saveSavedRoute() instead.
  * @param {Object} route - Route object to save
  * @throws {Error} If localStorage quota exceeded or validation fails
  */
 export function saveRoute(route) {
+  // Debug logging - enable by setting window.DEBUG_STORAGE = true in console
+  if (typeof window !== 'undefined' && window.DEBUG_STORAGE) {
+    console.log('[Storage] Saving route, current storage:');
+    logStorageInfo();
+  }
   try {
     const routes = getRoutes();
     const index = routes.findIndex(r => r.id === route.id);
@@ -98,10 +107,19 @@ export function saveRoute(route) {
     } else {
       routes.push(route);
     }
+    
     localStorage.setItem(STORAGE_PREFIX + 'routes', JSON.stringify(routes));
+    
+    // Debug logging after save
+    if (typeof window !== 'undefined' && window.DEBUG_STORAGE) {
+      const finalRoutes = getRoutes();
+      const finalSize = new Blob([JSON.stringify(finalRoutes)]).size;
+      console.log(`[Storage] Route saved. Total routes: ${finalRoutes.length}, size: ${(finalSize / 1024).toFixed(2)} KB`);
+      logStorageInfo();
+    }
   } catch (error) {
     if (error.name === 'QuotaExceededError') {
-      throw new Error('localStorage quota exceeded. Please delete old routes.');
+      throw new Error('localStorage quota exceeded. Please delete old routes or saved routes.');
     }
     throw error;
   }

@@ -97,6 +97,9 @@ export class RouteCreationWizard {
     };
 
     this.isVisible = true;
+    if (this.container) {
+      this.container.style.display = '';
+    }
     this.render();
     this.attachEventListeners();
   }
@@ -105,11 +108,19 @@ export class RouteCreationWizard {
    * Hide the wizard modal
    */
   hide() {
+    console.log('[Wizard] hide() called');
     this.isVisible = false;
     if (this.container) {
+      console.log('[Wizard] Clearing container HTML and hiding container');
       this.container.innerHTML = '';
+      // Also hide the container element itself
+      this.container.style.display = 'none';
+      console.log('[Wizard] Container hidden, display style:', this.container.style.display);
+    } else {
+      console.warn('[Wizard] Container not found!');
     }
     if (this.onCancel) {
+      console.log('[Wizard] Calling onCancel callback');
       this.onCancel();
     }
   }
@@ -216,10 +227,14 @@ export class RouteCreationWizard {
       }
     } else if (this.state.currentStep === 2) {
       // Step 3: Summary & Calculate
+      console.log('[Wizard] Creating summary component for step 3');
+      const wizardInstance = this; // Capture 'this' for the callback
       this.summary = new WizardSummary('temp-step-container', this.state, async () => {
-        return await this.calculateRoute();
+        console.log('[Wizard] Summary onCalculate callback called');
+        return await wizardInstance.calculateRoute();
       });
       this.summary.render();
+      console.log('[Wizard] Summary component created and rendered');
     }
   }
 
@@ -452,8 +467,16 @@ export class RouteCreationWizard {
         this.state.validationErrors.step2.push('Please configure a category');
       } else {
         // Validate category config values
-        if (!this.state.step2Data.categoryConfig.targetCookies || this.state.step2Data.categoryConfig.targetCookies <= 0) {
-          this.state.validationErrors.step2.push('Target cookies must be greater than 0');
+        // Achievement routes don't need targetCookies
+        if (this.state.step2Data.categoryType !== 'achievement') {
+          if (!this.state.step2Data.categoryConfig.targetCookies || this.state.step2Data.categoryConfig.targetCookies <= 0) {
+            this.state.validationErrors.step2.push('Target cookies must be greater than 0');
+          }
+        } else {
+          // Validate achievement selection
+          if (!this.state.step2Data.categoryConfig.achievementIds || this.state.step2Data.categoryConfig.achievementIds.length === 0) {
+            this.state.validationErrors.step2.push('Please select at least one achievement');
+          }
         }
         if (!this.state.step2Data.categoryConfig.version) {
           this.state.validationErrors.step2.push('Please select a game version');
@@ -510,12 +533,17 @@ export class RouteCreationWizard {
    * @returns {Promise<Object>} Calculated route
    */
   async calculateRoute() {
+    console.log('[Wizard] calculateRoute() called');
+    
     if (this.state.isCalculating) {
+      console.error('[Wizard] Calculation already in progress');
       throw new Error('Route calculation already in progress');
     }
 
     // Create RouteCreationConfig from wizard state
+    console.log('[Wizard] Creating route config...');
     const config = this.createRouteCreationConfig();
+    console.log('[Wizard] Route config created:', config);
     
     this.state.isCalculating = true;
     if (this.summary) {
@@ -523,6 +551,7 @@ export class RouteCreationWizard {
     }
 
     try {
+      console.log('[Wizard] Starting route calculation...');
       // Merge starting buildings (import + manual, manual takes precedence)
       const startingBuildings = {};
       if (this.state.step1Data.importedSaveGame?.buildingCounts) {
@@ -542,6 +571,8 @@ export class RouteCreationWizard {
         if (this.summary) {
           this.summary.updateProgress(progress.moves || 0);
         }
+        // Yield to browser to keep UI responsive
+        return new Promise(resolve => setTimeout(resolve, 0));
       };
 
       // Collect purchased upgrades
@@ -555,18 +586,27 @@ export class RouteCreationWizard {
       }
 
       // Calculate route
+      console.log('[Wizard] Calling calculateRoute with:', { category: config.category.name, versionId, startingBuildings });
       const route = await calculateRoute(config.category, startingBuildings, {
         algorithm: 'GPL',
         lookahead: 1,
         onProgress: onProgress,
         manualUpgrades: purchasedUpgrades
       }, versionId);
+      console.log('[Wizard] Route calculation returned:', route);
 
       // Store calculated route
       this.state.calculatedRoute = route;
       this.state.isCalculating = false;
+      console.log('[Wizard] Route stored in state');
 
-      // Route is automatically saved by calculateRoute function
+      // Check if route save failed (non-critical error)
+      if (route.saveError) {
+        console.warn('[Wizard] Route calculated but save failed:', route.saveError);
+        // Show warning but don't block completion
+      }
+
+      // Route is automatically saved by calculateRoute function (or attempted to be saved)
       // Get the category config for passing to completion callback
       const category = {
         id: config.category.id,
@@ -579,15 +619,42 @@ export class RouteCreationWizard {
         initialBuildings: config.category.initialBuildings,
         isPredefined: config.category.isPredefined
       };
+      
+      // Add achievement IDs if present
+      if (config.category.achievementIds) {
+        category.achievementIds = config.category.achievementIds;
+      }
 
-      // Close wizard and call completion callback with both route and category
+      // Reset calculating state before closing
+      if (this.summary) {
+        this.summary.setCalculating(false);
+      }
+
+      console.log('[Wizard] Route calculation completed, closing wizard');
+      console.log('[Wizard] Wizard state before hide:', { isVisible: this.isVisible, containerExists: !!this.container });
+      
+      // Close wizard first
+      console.log('[Wizard] Calling hide()...');
       this.hide();
+      console.log('[Wizard] hide() completed, isVisible:', this.isVisible);
+      
+      // Call completion callback after wizard is closed
       if (this.onComplete) {
-        this.onComplete(route, category, versionId);
+        try {
+          console.log('[Wizard] Calling completion callback');
+          this.onComplete(route, category, versionId);
+          console.log('[Wizard] Completion callback finished');
+        } catch (error) {
+          console.error('[Wizard] Error in wizard completion callback:', error);
+          // Don't re-throw - wizard is already closed
+        }
+      } else {
+        console.warn('[Wizard] No completion callback registered');
       }
 
       return route;
     } catch (error) {
+      console.error('[Wizard] Error during route calculation:', error);
       this.state.isCalculating = false;
       if (this.summary) {
         this.summary.setCalculating(false);
@@ -619,17 +686,28 @@ export class RouteCreationWizard {
                      'v2052';
 
     // Create category config
+    // Use version from categoryConfig, fallback to step1Data.versionId, then default to v2052
+    const categoryVersion = step2Data.categoryConfig.version || 
+                           step1Data.versionId || 
+                           step1Data.importedSaveGame?.version || 
+                           'v2052';
+    
     const category = {
       id: step2Data.selectedCategoryId || `custom-${Date.now()}`,
       name: step2Data.categoryConfig.name,
       isPredefined: step2Data.categoryType === 'predefined',
-      version: step2Data.categoryConfig.version,
-      targetCookies: step2Data.categoryConfig.targetCookies,
+      version: categoryVersion,
+      targetCookies: step2Data.categoryConfig.targetCookies || 0, // Achievement routes may not have targetCookies
       playerCps: step2Data.categoryConfig.playerCps || 8,
       playerDelay: step2Data.categoryConfig.playerDelay || 1,
       hardcoreMode: step2Data.categoryConfig.hardcoreMode || false,
       initialBuildings: step2Data.categoryConfig.initialBuildings || {}
     };
+    
+    // Add achievement IDs if this is an achievement route
+    if (step2Data.categoryType === 'achievement' && step2Data.categoryConfig.achievementIds) {
+      category.achievementIds = step2Data.categoryConfig.achievementIds;
+    }
 
     return {
       startingBuildings,

@@ -10,8 +10,20 @@
   <div id="app">
     <header>
       <h1>Cookie Clicker Building Order Simulator</h1>
-      <button type="button" id="create-route-btn" class="btn-primary" aria-label="Create new route">Create Route</button>
-      <button type="button" id="import-save-game-btn" class="btn-secondary" aria-label="Import save game">Import Save Game</button>
+      <div class="header-actions">
+        <button type="button" id="create-route-btn" class="btn-primary" aria-label="Create new route">Create Route</button>
+        <button type="button" id="import-save-game-btn" class="btn-secondary" aria-label="Import save game">Import Save Game</button>
+        <div class="settings-dropdown">
+          <button type="button" id="settings-btn" class="btn-secondary" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
+            ⚙️ Settings
+          </button>
+          <div id="settings-menu" class="settings-menu" role="menu" aria-hidden="true">
+            <button type="button" id="clear-storage-btn" class="settings-menu-item danger" role="menuitem" aria-label="Clear all data">
+              🗑️ Clear All Data
+            </button>
+          </div>
+        </div>
+      </div>
     </header>
     <main>
       <div id="save-game-details-section"></div>

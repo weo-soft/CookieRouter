@@ -3,6 +3,8 @@
  * Ported from Python router.py
  */
 
+import { Game } from './game.js';
+
 export class Router {
   /**
    * Brute-forces the optimal playthrough of 'game' with depth-first-search.
@@ -30,8 +32,23 @@ export class Router {
     };
     
     while (true) {
-      // Check if target is already reached
-      if (game.totalCookies >= game.targetCookies) {
+      // Check if target is already reached (cookie target OR achievement goals)
+      // Achievement goals take precedence if present
+      if (game.achievementGoals && game.achievementGoals.length > 0) {
+        const isMet = game.isAchievementGoalMet();
+        if (isMet) {
+          console.log(`[Router] Achievement goals met at start:`, {
+            achievementGoals: game.achievementGoals,
+            targetCps: game.targetCps,
+            targetBuilding: game.targetBuilding,
+            targetCookies: game.targetCookies,
+            numBuildings: game.numBuildings,
+            rate: game.rate(),
+            totalCookies: game.totalCookies
+          });
+          break;
+        }
+      } else if (game.totalCookies >= game.targetCookies) {
         break;
       }
       
@@ -40,14 +57,100 @@ export class Router {
       const childTime = performance.now() - childStartTime;
       
       if (child === null) {
+        console.log(`[Router] GPLChild returned null. Checking if we can continue...`, {
+          rate: game.rate(),
+          targetCookies: game.targetCookies,
+          totalCookies: game.totalCookies,
+          achievementGoals: game.achievementGoals,
+          isGoalMet: game.isAchievementGoalMet(),
+          targetBuilding: game.targetBuilding
+        });
+        
         // No valid moves found, but check if we can still reach target
         if (game.rate() > 0) {
-          // Continue until target is reached naturally
-          const remaining = game.targetCookies - game.totalCookies;
-          const timeNeeded = remaining / game.rate();
-          game.timeElapsed += timeNeeded;
-          game.totalCookies = game.targetCookies;
+          // If we have a cookie target, continue until target is reached naturally
+          if (game.targetCookies > 0) {
+            const remaining = game.targetCookies - game.totalCookies;
+            const timeNeeded = remaining / game.rate();
+            game.timeElapsed += timeNeeded;
+            game.totalCookies = game.targetCookies;
+          }
+          // If achievement goals are met, we're done
+          if (game.isAchievementGoalMet()) {
+            console.log(`[Router] Achievement goals met, breaking`);
+            break;
+          }
+          
+          // For achievement routes, if we can't make a purchase yet but have a rate,
+          // simulate waiting until we can afford the cheapest building we need
+          if (game.achievementGoals && game.achievementGoals.length > 0 && !game.isAchievementGoalMet()) {
+            console.log(`[Router] Achievement goals not met, trying to find cheapest building...`);
+            
+            // Find the cheapest building we need for achievement goals
+            let cheapestPrice = null;
+            let cheapestBuilding = null;
+            
+            // Check building-related achievement goals
+            if (game.targetBuilding) {
+              const price = game.buildingPrice(game.targetBuilding.name);
+              console.log(`[Router] Target building ${game.targetBuilding.name} costs ${price}, have ${game.totalCookies}`);
+              if (cheapestPrice === null || price < cheapestPrice) {
+                cheapestPrice = price;
+                cheapestBuilding = game.targetBuilding.name;
+              }
+            }
+            
+            // Also check all buildings in case we need any building
+            if (cheapestPrice === null) {
+              for (const buildingName of game.buildingNames) {
+                const price = game.buildingPrice(buildingName);
+                if (cheapestPrice === null || price < cheapestPrice) {
+                  cheapestPrice = price;
+                  cheapestBuilding = buildingName;
+                }
+              }
+            }
+            
+            console.log(`[Router] Cheapest building: ${cheapestBuilding}, price: ${cheapestPrice}, have: ${game.totalCookies}`);
+            
+            // If we found a building, try to purchase it (either we have enough cookies or we'll wait)
+            if (cheapestBuilding && game.rate() > 0) {
+              // If we don't have enough cookies yet, simulate waiting
+              if (cheapestPrice > game.totalCookies) {
+                const cookiesNeeded = cheapestPrice - game.totalCookies;
+                const timeNeeded = cookiesNeeded / game.rate();
+                console.log(`[Router] Simulating wait: need ${cookiesNeeded} cookies, will take ${timeNeeded}s`);
+                game.timeElapsed += timeNeeded;
+                game.totalCookies = cheapestPrice;
+              }
+              
+              // Now try to purchase the building
+              const purchaseChild = new Game(null, game);
+              if (purchaseChild.purchaseBuilding(cheapestBuilding)) {
+                console.log(`[Router] Successfully purchased ${cheapestBuilding}, continuing...`);
+                game = purchaseChild;
+                numMoves += 1;
+                continue; // Continue the loop with the new game state
+              } else {
+                console.log(`[Router] Failed to purchase ${cheapestBuilding}`, {
+                  totalCookies: game.totalCookies,
+                  price: cheapestPrice,
+                  canAfford: game.totalCookies >= cheapestPrice
+                });
+              }
+            } else {
+              console.log(`[Router] Cannot purchase building:`, {
+                cheapestBuilding,
+                cheapestPrice,
+                totalCookies: game.totalCookies,
+                rate: game.rate()
+              });
+            }
+          }
+        } else {
+          console.log(`[Router] Rate is 0, cannot continue`);
         }
+        console.log(`[Router] Breaking - no valid moves and cannot continue`);
         break;
       }
       

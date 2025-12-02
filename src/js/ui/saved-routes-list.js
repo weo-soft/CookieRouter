@@ -138,6 +138,12 @@ export class SavedRoutesList {
             <span class="saved-route-version">${this.escapeHtml(route.versionId)}</span>
             <span class="saved-route-separator">•</span>
             <span class="saved-route-buildings">${buildingCount} steps</span>
+            ${route.routeData?.achievementIds && route.routeData.achievementIds.length > 0 ? `
+              <span class="saved-route-separator">•</span>
+              <span class="saved-route-achievements" title="Achievement-based route">
+                🏆 ${route.routeData.achievementIds.length} Achievement${route.routeData.achievementIds.length !== 1 ? 's' : ''}
+              </span>
+            ` : ''}
           </div>
           <div class="saved-route-dates">
             <span class="saved-route-date">Saved: ${formattedSavedDate}</span>

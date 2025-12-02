@@ -4,6 +4,7 @@
  */
 
 import { getProgress, saveProgress, updateProgress, clearProgress } from '../storage.js';
+import { getAchievementById } from '../../data/achievements.js';
 import { formatNumber } from '../utils/format.js';
 
 export class RouteDisplay {
@@ -72,6 +73,41 @@ export class RouteDisplay {
       const indexB = orderMap.get(b) ?? Infinity;
       return indexA - indexB;
     });
+  }
+
+  /**
+   * Calculate derived values for a route step
+   * Calculates cookiesPerSecond, timeElapsed, and totalCookies from stored values
+   * @param {Object} step - Route step object
+   * @param {Object} previousStep - Previous step (with calculated values) or null for first step
+   * @returns {Object} Step with calculated values added
+   */
+  calculateStepValues(step, previousStep = null) {
+    const calculated = { ...step };
+    
+    // Backward compatibility: if step already has calculated values, use them
+    if (step.cookiesPerSecond !== undefined && step.timeElapsed !== undefined && step.totalCookies !== undefined) {
+      // Old format - values already calculated, just return as-is
+      return calculated;
+    }
+    
+    if (previousStep === null) {
+      // First step - use initial values if available, otherwise defaults
+      calculated.cookiesPerSecond = step.initialCookiesPerSecond || step.cookiesPerSecond || 0;
+      calculated.timeElapsed = step.initialTimeElapsed || step.timeElapsed || 0;
+      calculated.totalCookies = step.initialTotalCookies || step.totalCookies || 0;
+    } else {
+      // Calculate from previous step
+      calculated.cookiesPerSecond = previousStep.cookiesPerSecond + (step.cpsIncrease || 0);
+      calculated.timeElapsed = previousStep.timeElapsed + (step.timeSinceLastStep || 0);
+      
+      // Calculate totalCookies: previous total - cost + cookies generated during wait time
+      const cookiesAfterPurchase = previousStep.totalCookies - previousStep.cookiesRequired;
+      const cookiesGenerated = previousStep.cookiesPerSecond * (step.timeSinceLastStep || 0);
+      calculated.totalCookies = cookiesAfterPurchase + cookiesGenerated;
+    }
+    
+    return calculated;
   }
 
   /**
@@ -160,6 +196,16 @@ export class RouteDisplay {
           <span>Completion Time: ${this.formatTime(completionTime)}</span>
           <span>Total Steps: ${totalCount}</span>
           ${this.currentRoute.usedImportedData ? '<span class="imported-data-indicator" title="This route was calculated using imported save game data">📥 Using Imported Data</span>' : ''}
+          ${this.currentRoute.achievementIds && this.currentRoute.achievementIds.length > 0 ? `
+            <span class="achievement-route-indicator" title="Achievement-based route">
+              🏆 ${this.currentRoute.achievementIds.length} Achievement${this.currentRoute.achievementIds.length !== 1 ? 's' : ''}
+            </span>
+            ${this.currentRoute.achievementUnlocks && this.currentRoute.achievementUnlocks.length > 0 ? `
+              <span class="achievement-completion-summary" title="Achievements unlocked during route">
+                ✓ ${this.currentRoute.achievementUnlocks.reduce((sum, unlock) => sum + unlock.achievementIds.length, 0)} Unlocked
+              </span>
+            ` : ''}
+          ` : ''}
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar" role="progressbar" 
@@ -173,53 +219,73 @@ export class RouteDisplay {
       </div>
       ${this.renderRouteSummary()}
       <div class="route-list" role="list">
-        ${buildings.map((step, index) => {
-          const isCompleted = this.progress.completedBuildings.includes(step.order);
-          return `
+        ${(() => {
+          // Pre-calculate all step values efficiently (only calculate each step once)
+          const calculatedSteps = [];
+          for (let i = 0; i < buildings.length; i++) {
+            const previousStep = i > 0 ? calculatedSteps[i - 1] : null;
+            calculatedSteps.push(this.calculateStepValues(buildings[i], previousStep));
+          }
+          return calculatedSteps.map((calculatedStep, index) => {
+            const isCompleted = this.progress.completedBuildings.includes(calculatedStep.order);
+            return `
             <div class="route-step ${isCompleted ? 'completed' : ''}" 
                  role="listitem"
-                 data-step-order="${step.order}">
+                 data-step-order="${calculatedStep.order}">
               <label class="step-checkbox">
                 <input 
                   type="checkbox" 
                   ${isCompleted ? 'checked' : ''}
-                  aria-label="Mark step ${step.order} as completed"
-                  data-step-order="${step.order}"
+                  aria-label="Mark step ${calculatedStep.order} as completed"
+                  data-step-order="${calculatedStep.order}"
                 >
-                <span class="step-number">${step.order}</span>
+                <span class="step-number">${calculatedStep.order}</span>
               </label>
               <div class="step-content">
                 <div class="step-info">
-                  <span class="step-building">${this.escapeHtml(step.buildingName)}${step.buildingCount !== null && step.buildingCount !== undefined ? ` [${step.buildingCount}]` : ''}</span>
+                  <span class="step-building">${this.escapeHtml(calculatedStep.buildingName)}${calculatedStep.buildingCount !== null && calculatedStep.buildingCount !== undefined ? ` [${calculatedStep.buildingCount}]` : ''}</span>
                   <span class="step-separator">•</span>
-                  <span class="step-detail">Cookies: ${formatNumber(step.cookiesRequired)}</span>
+                  <span class="step-detail">Cookies: ${formatNumber(calculatedStep.cookiesRequired)}</span>
                   <span class="step-separator">•</span>
-                  <span class="step-detail">CpS: ${formatNumber(step.cookiesPerSecond)}${step.cpsIncrease !== undefined && step.cpsIncrease > 0 ? ` (+${formatNumber(step.cpsIncrease)})` : ''}</span>
+                  <span class="step-detail">CpS: ${formatNumber(calculatedStep.cookiesPerSecond)}${calculatedStep.cpsIncrease !== undefined && calculatedStep.cpsIncrease > 0 ? ` (+${formatNumber(calculatedStep.cpsIncrease)})` : ''}</span>
                   <span class="step-separator">•</span>
-                  <span class="step-detail">Time: ${this.formatTime(step.timeElapsed)}</span>
-                  ${step.timeSinceLastStep !== undefined ? `
+                  <span class="step-detail">Time: ${this.formatTime(calculatedStep.timeElapsed)}</span>
+                  ${calculatedStep.timeSinceLastStep !== undefined ? `
                   <span class="step-separator">•</span>
-                  <span class="step-detail">Since Last: ${this.formatTime(step.timeSinceLastStep)}</span>
+                  <span class="step-detail">Since Last: ${this.formatTime(calculatedStep.timeSinceLastStep)}</span>
                   ` : ''}
                 </div>
+                ${calculatedStep.achievementUnlocks && calculatedStep.achievementUnlocks.length > 0 ? `
+                <div class="step-achievement-unlocks">
+                  <span class="achievement-unlock-icon">🏆</span>
+                  <span class="achievement-unlock-text">
+                    Achievement${calculatedStep.achievementUnlocks.length !== 1 ? 's' : ''} unlocked: 
+                    ${calculatedStep.achievementUnlocks.map(id => {
+                      const achievement = getAchievementById(id);
+                      return achievement ? achievement.name : `Achievement ${id}`;
+                    }).join(', ')}
+                  </span>
+                </div>
+                ` : ''}
               </div>
               <button 
                 class="step-check-all-btn" 
-                data-step-order="${step.order}"
-                aria-label="Check all previous steps up to step ${step.order}"
+                data-step-order="${calculatedStep.order}"
+                aria-label="Check all previous steps up to step ${calculatedStep.order}"
                 title="Check all previous steps">
                 ✓ All
               </button>
               <button 
                 class="step-info-icon" 
-                data-step-order="${step.order}"
-                aria-label="Show summary up to step ${step.order}"
+                data-step-order="${calculatedStep.order}"
+                aria-label="Show summary up to step ${calculatedStep.order}"
                 title="Show summary">
                 ℹ
               </button>
             </div>
           `;
-        }).join('')}
+          }).join('');
+        })()}
       </div>
     `;
 
@@ -266,6 +332,36 @@ export class RouteDisplay {
 
     // Attach tooltip event listeners
     this.attachTooltipListeners();
+
+    // Attach route summary toggle listener
+    const summaryToggle = this.container.querySelector('.route-summary-toggle');
+    if (summaryToggle) {
+      summaryToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const content = this.container.querySelector('.route-summary-content');
+        if (content) {
+          const isCurrentlyExpanded = summaryToggle.getAttribute('aria-expanded') === 'true';
+          const willBeExpanded = !isCurrentlyExpanded;
+          
+          // Update collapsed class based on new state
+          if (willBeExpanded) {
+            content.classList.remove('collapsed');
+          } else {
+            content.classList.add('collapsed');
+          }
+          
+          // Update aria-expanded attribute
+          summaryToggle.setAttribute('aria-expanded', willBeExpanded ? 'true' : 'false');
+          
+          // Update icon to reflect new state
+          const icon = summaryToggle.querySelector('.collapse-icon');
+          if (icon) {
+            icon.textContent = willBeExpanded ? '▼' : '▶';
+          }
+        }
+      });
+    }
 
     // Restore scroll position after rendering
     if (savedScrollTop > 0) {
@@ -690,8 +786,17 @@ export class RouteDisplay {
     const { buildings, upgrades } = summary;
     
     let html = '<div class="route-summary-section">';
+    
+    // Header with toggle button (collapsible for all routes)
+    html += '<div class="route-summary-header">';
     html += '<h3 class="route-summary-title">Route Summary</h3>';
-    html += '<div class="route-summary-content">';
+    html += '<button class="route-summary-toggle collapse-toggle" aria-label="Toggle route summary" aria-expanded="false">';
+    html += '<span class="collapse-icon">▶</span>';
+    html += '</button>';
+    html += '</div>';
+    
+    // Content wrapper with collapsible class - collapsed by default
+    html += '<div class="route-summary-content collapsed">';
     
     // Buildings section - sort by game order
     const buildingEntries = Object.entries(buildings)

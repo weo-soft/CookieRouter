@@ -13,6 +13,7 @@ import { RouteCreationWizard } from './js/ui/route-creation-wizard.js';
 import { calculateRoute } from './js/simulation.js';
 import { getImportedSaveGame, getImportState } from './js/save-game-importer.js';
 import { getSavedRoutes } from './js/storage.js';
+import { logStorageInfo, logStorageAnalysis } from './js/utils/storage-analysis.js';
 
 // Initialize UI components (conditionally based on page state)
 // CategorySelector, CustomCategoryForm, and StartingBuildingsSelector are only used in wizard, not in main.js
@@ -298,39 +299,76 @@ async function updatePageStateAfterRouteSave() {
  * @param {string} versionId - Game version ID
  */
 async function handleWizardComplete(route, category, versionId) {
-  // Set category and version on route display for saving
-  if (category && versionId) {
-    routeDisplay.setCategoryAndVersion(category, versionId);
-  }
+  console.log('[Main] Wizard completion handler called', { route, category, versionId });
   
-  // Display the calculated route
-  await routeDisplay.displayRoute(route);
-  
-  // Check if a save game was imported during the wizard and make it available
-  const importedSaveGame = getImportedSaveGame();
-  if (importedSaveGame) {
-    // Refresh save game details view to show the imported data
-    if (saveGameDetailsView) {
-      saveGameDetailsView.refresh();
+  try {
+    // Set category and version on route display for saving
+    if (category && versionId) {
+      routeDisplay.setCategoryAndVersion(category, versionId);
     }
     
-    // Update starting buildings if needed
-    if (importedSaveGame.buildingCounts) {
-      currentStartingBuildings = importedSaveGame.buildingCounts;
+    // Display the calculated route
+    console.log('[Main] Displaying route...');
+    await routeDisplay.displayRoute(route);
+    console.log('[Main] Route displayed');
+    
+    // Show warning if route couldn't be saved
+    if (route.saveError) {
+      console.warn('[Main] Route save failed:', route.saveError);
+      // Show a user-visible warning (could be enhanced with a toast notification)
+      const routeSection = document.getElementById('route-section');
+      if (routeSection) {
+        const warning = document.createElement('div');
+        warning.className = 'save-warning';
+        warning.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; padding: 12px; margin: 10px 0; border-radius: 4px; color: #856404;';
+        warning.innerHTML = `
+          <strong>Warning:</strong> The route was calculated successfully but could not be saved to localStorage. 
+          ${route.saveError.includes('quota') ? 'Please delete old routes to free up space.' : route.saveError}
+        `;
+        routeSection.insertBefore(warning, routeSection.firstChild);
+      }
     }
     
-    // Update current version if detected
-    if (importedSaveGame.version) {
-      currentVersion = importedSaveGame.version;
+    // Check if a save game was imported during the wizard and make it available
+    const importedSaveGame = getImportedSaveGame();
+    if (importedSaveGame) {
+      // Refresh save game details view to show the imported data
+      if (saveGameDetailsView) {
+        saveGameDetailsView.refresh();
+      }
+      
+      // Update starting buildings if needed
+      if (importedSaveGame.buildingCounts) {
+        currentStartingBuildings = importedSaveGame.buildingCounts;
+      }
+      
+      // Update current version if detected
+      if (importedSaveGame.version) {
+        currentVersion = importedSaveGame.version;
+      }
     }
-  }
-  
-  // Update page state after route save (handles first-time to returning user transition)
-  await updatePageStateAfterRouteSave();
-  
-  console.log('Route created via wizard:', route);
-  if (category) {
-    console.log('Category:', category);
+    
+    // Update page state after route save (handles first-time to returning user transition)
+    console.log('[Main] Updating page state...');
+    await updatePageStateAfterRouteSave();
+    console.log('[Main] Page state updated');
+    
+    // Scroll to route section to show the calculated route
+    const routeSection = document.getElementById('route-section');
+    if (routeSection) {
+      console.log('[Main] Scrolling to route section...');
+      routeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      console.warn('[Main] Route section not found');
+    }
+    
+    console.log('[Main] Route created via wizard:', route);
+    if (category) {
+      console.log('[Main] Category:', category);
+    }
+  } catch (error) {
+    console.error('[Main] Error in wizard completion handler:', error);
+    throw error;
   }
 }
 
@@ -340,6 +378,94 @@ async function handleWizardComplete(route, category, versionId) {
 function handleWizardCancel() {
   // Wizard was cancelled, nothing special needed
   console.log('Wizard cancelled');
+}
+
+/**
+ * Setup settings dropdown functionality
+ */
+function setupSettingsDropdown() {
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsMenu = document.getElementById('settings-menu');
+  const clearStorageBtn = document.getElementById('clear-storage-btn');
+
+  if (!settingsBtn || !settingsMenu || !clearStorageBtn) {
+    return;
+  }
+
+  // Toggle dropdown on button click
+  settingsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = settingsMenu.getAttribute('aria-hidden') === 'false';
+    settingsMenu.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
+    settingsBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+      settingsMenu.setAttribute('aria-hidden', 'true');
+      settingsBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Close dropdown on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && settingsMenu.getAttribute('aria-hidden') === 'false') {
+      settingsMenu.setAttribute('aria-hidden', 'true');
+      settingsBtn.setAttribute('aria-expanded', 'false');
+      settingsBtn.focus();
+    }
+  });
+
+  // Handle clear storage button
+  clearStorageBtn.addEventListener('click', () => {
+    handleClearStorage();
+    // Close dropdown after action
+    settingsMenu.setAttribute('aria-hidden', 'true');
+    settingsBtn.setAttribute('aria-expanded', 'false');
+  });
+}
+
+/**
+ * Handle clear all localStorage data
+ */
+function handleClearStorage() {
+  const confirmed = confirm(
+    'Are you sure you want to clear all data?\n\n' +
+    'This will delete:\n' +
+    '• All saved routes\n' +
+    '• All calculated routes\n' +
+    '• All progress tracking\n' +
+    '• All custom categories\n' +
+    '• All imported save game data\n\n' +
+    'This action cannot be undone!'
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    // Clear all cookieRouter localStorage items
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('cookieRouter:')) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
+    console.log(`[Storage] Cleared ${keysToRemove.length} localStorage item(s)`);
+
+    // Reload the page to reset the application state
+    alert('All data has been cleared. The page will reload.');
+    window.location.reload();
+  } catch (error) {
+    console.error('[Storage] Error clearing localStorage:', error);
+    alert('Error clearing data: ' + error.message);
+  }
 }
 
 /**
@@ -493,6 +619,9 @@ async function init() {
       });
     }
 
+    // Set up settings dropdown
+    setupSettingsDropdown();
+
     // Initialize save game details view
     if (saveGameDetailsView) {
       saveGameDetailsView.init();
@@ -520,6 +649,14 @@ async function init() {
           }
         }
       }, 100);
+    }
+    
+    // Make storage debugging functions available globally
+    if (typeof window !== 'undefined') {
+      window.logStorageInfo = logStorageInfo;
+      window.logStorageAnalysis = logStorageAnalysis;
+      console.log('💾 Storage debugging available: Use logStorageInfo() or logStorageAnalysis() in console');
+      console.log('💾 Enable auto-logging: Set window.DEBUG_STORAGE = true');
     }
     
     console.log('Cookie Clicker Building Order Simulator initialized');
