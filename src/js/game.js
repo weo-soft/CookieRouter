@@ -3,7 +3,7 @@
  * Ported from Python game.py
  */
 
-import { getAchievementRequirement } from '../data/achievement-requirements.js';
+import { getAchievementRequirement } from './utils/achievement-requirements.js';
 
 export class Upgrade {
   constructor(name, req, price, effects, id = null) {

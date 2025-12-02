@@ -5,7 +5,7 @@
 
 import { Router } from './router.js';
 import { getImportedSaveGame } from './save-game-importer.js';
-import { getAchievementRequirement } from '../data/achievement-requirements.js';
+import { getAchievementRequirement } from './utils/achievement-requirements.js';
 import { extractFinalStateFromRoute } from './utils/route-state-extractor.js';
 
 /**

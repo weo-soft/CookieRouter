@@ -4,7 +4,7 @@
  */
 
 import { getProgress, saveProgress, updateProgress, clearProgress } from '../storage.js';
-import { getAchievementById } from '../../data/achievements.js';
+import { getAchievementById } from '../utils/achievements.js';
 import { formatNumber } from '../utils/format.js';
 
 export class RouteDisplay {

@@ -473,7 +473,7 @@ export async function extractAchievements(decodedSave, versionId) {
   // Load achievement mapping
   let getAchievementById;
   try {
-    const achievementsModule = await import('../data/achievements.js');
+    const achievementsModule = await import('./utils/achievements.js');
     getAchievementById = achievementsModule.getAchievementById;
   } catch (error) {
     console.warn('Failed to load achievement mapping:', error);

@@ -5,8 +5,8 @@
  * Provides detailed achievement information via modal dialogs.
  */
 
-import { achievements, getAchievementById } from '../../data/achievements.js';
-import { getAchievementRequirement, isAchievementRouteable } from '../../data/achievement-requirements.js';
+import { achievements, getAchievementById } from '../utils/achievements.js';
+import { getAchievementRequirement, isAchievementRouteable } from '../utils/achievement-requirements.js';
 import { filterAchievements, formatAchievementRequirement } from '../utils/achievement-utils.js';
 import { formatNumber } from '../utils/format.js';
 

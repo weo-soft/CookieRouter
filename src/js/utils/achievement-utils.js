@@ -2,8 +2,8 @@
  * Achievement utilities for filtering and searching achievements
  */
 
-import { achievements } from '../../data/achievements.js';
-import { getAchievementRequirement, isAchievementRouteable } from '../../data/achievement-requirements.js';
+import { achievements } from './achievements.js';
+import { getAchievementRequirement, isAchievementRouteable } from './achievement-requirements.js';
 import { formatNumber } from './format.js';
 
 /**

@@ -23,7 +23,7 @@
  * }
  */
 // Import achievements from JSON file
-import achievementsData from './achievements.json';
+import achievementsData from '../../data/achievements/achievements.json';
 
 // Ensure achievements is always an array, even if import fails
 export const achievements = Array.isArray(achievementsData) ? achievementsData : [];
