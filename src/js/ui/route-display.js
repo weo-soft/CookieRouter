@@ -41,8 +41,8 @@ export class RouteDisplay {
     }
     
     try {
-      const versionModules = await import(`../../data/versions/${versionId}.js`);
-      const version = versionModules.default;
+      const { loadVersionById } = await import('../utils/version-loader.js');
+      const version = await loadVersionById(versionId);
       this.buildingOrder = version.buildingNames || [];
     } catch (error) {
       console.warn(`Failed to load building order for ${versionId}, using default`, error);

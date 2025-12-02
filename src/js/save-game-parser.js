@@ -122,8 +122,8 @@ export async function extractBuildingCounts(decodedSave, versionId) {
   // Load building names for the version
   let buildingNames = [];
   try {
-    const versionModules = await import(`../data/versions/${versionId}.js`);
-    const version = versionModules.default;
+    const { loadVersionById } = await import('./utils/version-loader.js');
+    const version = await loadVersionById(versionId);
     buildingNames = version.buildingNames || [];
   } catch (error) {
     console.warn(`Failed to load version ${versionId} for building mapping:`, error);
@@ -404,8 +404,8 @@ export async function extractUpgrades(decodedSave, versionId) {
   // Load upgrade objects from version data, indexed by ID
   let upgradesById = [];
   try {
-    const versionModules = await import(`../data/versions/${versionId}.js`);
-    const version = versionModules.default;
+    const { loadVersionById } = await import('./utils/version-loader.js');
+    const version = await loadVersionById(versionId);
     
     // Ensure version.upgradesById is an array of upgrade objects, indexed by their ID
     if (version.upgradesById && Array.isArray(version.upgradesById)) {

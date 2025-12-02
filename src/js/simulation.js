@@ -62,13 +62,17 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   // Load the selected version (use effective version from imported data if available)
   let version;
   try {
-    const versionModules = await import(`../data/versions/${effectiveVersionId}.js`);
-    version = versionModules.default;
+    const { loadVersionById } = await import('./utils/version-loader.js');
+    version = await loadVersionById(effectiveVersionId);
   } catch (error) {
     console.warn(`Failed to load version ${effectiveVersionId}, falling back to v2052`, error);
-    const versionModules = await import('../data/versions/v2052.js');
-    version = versionModules.default;
-    effectiveVersionId = 'v2052';
+    try {
+      const { loadVersionById } = await import('./utils/version-loader.js');
+      version = await loadVersionById('v2052');
+      effectiveVersionId = 'v2052';
+    } catch (fallbackError) {
+      throw new Error(`Failed to load version ${effectiveVersionId} and fallback v2052: ${fallbackError.message}`);
+    }
   }
 
   // Create game instance from category
@@ -90,7 +94,7 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     const functionName = categoryMap[categoryName];
     
     if (functionName && categoryFunctions[functionName]) {
-      game = categoryFunctions[functionName](version, category.playerCps || 8, category.playerDelay || 1);
+      game = await categoryFunctions[functionName](version, category.playerCps || 8, category.playerDelay || 1);
     } else {
       // Fallback: create game manually
       game = new Game(version);

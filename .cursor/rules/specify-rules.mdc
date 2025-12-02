@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-11-23
 
 ## Active Technologies
+- JavaScript (ES6 modules), Node.js compatible + Vite (build tool), Vitest (testing), no external runtime dependencies for version loading (001-versions-data-refactor)
+- JSON files in `src/data/versions/` directory (file-based, no database) (001-versions-data-refactor)
 
 - JavaScript (ES6+), HTML5, CSS3 + Vite (build tool), minimal external libraries (TBD during research) (001-cookie-clicker-simulator)
 
@@ -23,6 +25,7 @@ npm test; npm run lint
 JavaScript (ES6+), HTML5, CSS3: Follow standard conventions
 
 ## Recent Changes
+- 001-versions-data-refactor: Added JavaScript (ES6 modules), Node.js compatible + Vite (build tool), Vitest (testing), no external runtime dependencies for version loading
 
 - 001-cookie-clicker-simulator: Added JavaScript (ES6+), HTML5, CSS3 + Vite (build tool), minimal external libraries (TBD during research)
 

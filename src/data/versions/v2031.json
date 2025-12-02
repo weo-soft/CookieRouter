@@ -1,0 +1,852 @@
+{
+  "version": "v2031",
+  "buildings": {
+    "names": [
+      "Cursor",
+      "Grandma",
+      "Farm",
+      "Mine",
+      "Factory",
+      "Bank",
+      "Temple",
+      "Wizard tower",
+      "Shipment",
+      "Alchemy lab"
+    ],
+    "basePrices": {
+      "Cursor": 15,
+      "Grandma": 100,
+      "Farm": 1100,
+      "Mine": 12000,
+      "Factory": 130000,
+      "Bank": 1400000,
+      "Temple": 20000000,
+      "Wizard tower": 330000000,
+      "Shipment": 5100000000,
+      "Alchemy lab": 75000000000
+    },
+    "baseRates": {
+      "Cursor": 0.1,
+      "Grandma": 1,
+      "Farm": 8,
+      "Mine": 47,
+      "Factory": 260,
+      "Bank": 1400,
+      "Temple": 7800,
+      "Wizard tower": 44000,
+      "Shipment": 260000,
+      "Alchemy lab": 1600000
+    }
+  },
+  "upgrades": [
+    {
+      "name": "Reinforced index finger",
+      "requirements": {
+        "Cursor": 1
+      },
+      "price": 100,
+      "effects": {
+        "Cursor": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Carpel tunnel prevention cream",
+      "requirements": {
+        "Cursor": 1
+      },
+      "price": 500,
+      "effects": {
+        "Cursor": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Ambidextrous",
+      "requirements": {
+        "Cursor": 10
+      },
+      "price": 10000,
+      "effects": {
+        "Cursor": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Plastic mouse",
+      "requirements": {},
+      "price": 50000,
+      "effects": {
+        "mouse": {
+          "type": "mouseBoost",
+          "params": [],
+          "priority": 1
+        }
+      }
+    },
+    {
+      "name": "Forwards from grandma",
+      "requirements": {
+        "Grandma": 1
+      },
+      "price": 1000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Steel-plated rolling pins",
+      "requirements": {
+        "Grandma": 5
+      },
+      "price": 5000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Lubricated dentures",
+      "requirements": {
+        "Grandma": 25
+      },
+      "price": 50000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Prune juice",
+      "requirements": {
+        "Grandma": 50
+      },
+      "price": 5000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Double-thick glasses",
+      "requirements": {
+        "Grandma": 100
+      },
+      "price": 500000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Aging agents",
+      "requirements": {
+        "Grandma": 150
+      },
+      "price": 50000000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Farmer grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Farm": 15
+      },
+      "price": 55000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "Farm": {
+          "type": "grandmaBoost",
+          "params": [
+            1
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Miner grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Mine": 15
+      },
+      "price": 600000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "Mine": {
+          "type": "grandmaBoost",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Worker grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Factory": 15
+      },
+      "price": 6500000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "Factory": {
+          "type": "grandmaBoost",
+          "params": [
+            3
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Banker grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Bank": 15
+      },
+      "price": 70000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "Bank": {
+          "type": "grandmaBoost",
+          "params": [
+            4
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Priestess grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Temple": 15
+      },
+      "price": 1000000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "Temple": {
+          "type": "grandmaBoost",
+          "params": [
+            5
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Witch grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Wizard tower": 15
+      },
+      "price": 16500000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "Wizard tower": {
+          "type": "grandmaBoost",
+          "params": [
+            6
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Cosmic grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Shipment": 15
+      },
+      "price": 255000000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "Shipment": {
+          "type": "grandmaBoost",
+          "params": [
+            7
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Cheap hoes",
+      "requirements": {
+        "Farm": 1
+      },
+      "price": 11000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Fertilizer",
+      "requirements": {
+        "Farm": 5
+      },
+      "price": 55000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Cookie trees",
+      "requirements": {
+        "Farm": 25
+      },
+      "price": 550000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Genetically-modified cookies",
+      "requirements": {
+        "Farm": 50
+      },
+      "price": 55000000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Gingerbread scarecrows",
+      "requirements": {
+        "Farm": 100
+      },
+      "price": 5500000000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Pulsar sprinklers",
+      "requirements": {
+        "Farm": 150
+      },
+      "price": 550000000000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Sugar gas",
+      "requirements": {
+        "Mine": 1
+      },
+      "price": 120000,
+      "effects": {
+        "Mine": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Mega drill",
+      "requirements": {
+        "Mine": 5
+      },
+      "price": 600000,
+      "effects": {
+        "Mine": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Ultradrill",
+      "requirements": {
+        "Mine": 25
+      },
+      "price": 6000000,
+      "effects": {
+        "Mine": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Ultimadrill",
+      "requirements": {
+        "Mine": 50
+      },
+      "price": 600000000,
+      "effects": {
+        "Mine": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "H-bomb mining",
+      "requirements": {
+        "Mine": 100
+      },
+      "price": 60000000000,
+      "effects": {
+        "Mine": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Sturdier conveyor belts",
+      "requirements": {
+        "Factory": 1
+      },
+      "price": 1300000,
+      "effects": {
+        "Factory": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Child labor",
+      "requirements": {
+        "Factory": 5
+      },
+      "price": 6500000,
+      "effects": {
+        "Factory": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Sweatshop",
+      "requirements": {
+        "Factory": 25
+      },
+      "price": 65000000,
+      "effects": {
+        "Factory": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Radium reactors",
+      "requirements": {
+        "Factory": 50
+      },
+      "price": 6500000000,
+      "effects": {
+        "Factory": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Recombobulators",
+      "requirements": {
+        "Factory": 100
+      },
+      "price": 650000000000,
+      "effects": {
+        "Factory": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Taller tellers",
+      "requirements": {
+        "Bank": 1
+      },
+      "price": 14000000,
+      "effects": {
+        "Bank": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Scissor-resistant credit cards",
+      "requirements": {
+        "Bank": 5
+      },
+      "price": 70000000,
+      "effects": {
+        "Bank": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Acid-proof vaults",
+      "requirements": {
+        "Bank": 25
+      },
+      "price": 700000000,
+      "effects": {
+        "Bank": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Chocolate coins",
+      "requirements": {
+        "Bank": 50
+      },
+      "price": 70000000000,
+      "effects": {
+        "Bank": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Golden idols",
+      "requirements": {
+        "Temple": 1
+      },
+      "price": 200000000,
+      "effects": {
+        "Temple": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Sacrifices",
+      "requirements": {
+        "Temple": 5
+      },
+      "price": 1000000000,
+      "effects": {
+        "Temple": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Delicious blessing",
+      "requirements": {
+        "Temple": 25
+      },
+      "price": 10000000000,
+      "effects": {
+        "Temple": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Pointier hats",
+      "requirements": {
+        "Wizard tower": 1
+      },
+      "price": 3300000000,
+      "effects": {
+        "Wizard tower": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Beardlier beards",
+      "requirements": {
+        "Wizard tower": 5
+      },
+      "price": 16500000000,
+      "effects": {
+        "Wizard tower": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Ancient grimoires",
+      "requirements": {
+        "Wizard tower": 25
+      },
+      "price": 165000000000,
+      "effects": {
+        "Wizard tower": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Vanilla nebulae",
+      "requirements": {
+        "Shipment": 1
+      },
+      "price": 51000000000,
+      "effects": {
+        "Shipment": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Wormholes",
+      "requirements": {
+        "Shipment": 5
+      },
+      "price": 255000000000,
+      "effects": {
+        "Shipment": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Antimony",
+      "requirements": {
+        "Alchemy lab": 1
+      },
+      "price": 750000000000,
+      "effects": {
+        "Alchemy lab": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    }
+  ]
+}

@@ -25,9 +25,9 @@ export class StartingBuildingsSelector {
    */
   async init(versionId = 'v2052') {
     try {
-      // Dynamically import the version to get building names and upgrades
-      const versionModules = await import(`../../data/versions/${versionId}.js`);
-      const version = versionModules.default;
+      // Load the version using the version loader
+      const { loadVersionById } = await import('../utils/version-loader.js');
+      const version = await loadVersionById(versionId);
       this.currentVersion = version;
       this.availableBuildings = version.buildingNames || [];
       
