@@ -1,0 +1,775 @@
+{
+  "version": "v10466_xmas",
+  "buildings": {
+    "names": [
+      "Cursor",
+      "Grandma",
+      "Farm",
+      "Factory",
+      "Mine",
+      "Shipment",
+      "Alchemy lab",
+      "Portal"
+    ],
+    "basePrices": {
+      "Cursor": 15,
+      "Grandma": 100,
+      "Farm": 500,
+      "Factory": 3000,
+      "Mine": 10000,
+      "Shipment": 40000,
+      "Alchemy lab": 200000,
+      "Portal": 1667000
+    },
+    "baseRates": {
+      "Cursor": 0.1,
+      "Grandma": 0.5,
+      "Farm": 4,
+      "Factory": 10,
+      "Mine": 40,
+      "Shipment": 100,
+      "Alchemy lab": 400,
+      "Portal": 6666
+    }
+  },
+  "upgrades": [
+    {
+      "name": "Kitten helpers",
+      "requirements": {},
+      "price": 9000000,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Reinforced index finger",
+      "requirements": {
+        "Cursor": 1
+      },
+      "price": 100,
+      "effects": {
+        "Cursor": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Carpel tunnel prevention cream",
+      "requirements": {
+        "Cursor": 1
+      },
+      "price": 400,
+      "effects": {
+        "Cursor": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Ambidextrous",
+      "requirements": {
+        "Cursor": 10
+      },
+      "price": 10000,
+      "effects": {
+        "Cursor": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Thousand fingers",
+      "requirements": {
+        "Cursor": 20
+      },
+      "price": 500000,
+      "effects": {
+        "Cursor": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Million fingers",
+      "requirements": {
+        "Cursor": 40
+      },
+      "price": 50000000,
+      "effects": {
+        "Cursor": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        },
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Plastic mouse",
+      "requirements": {},
+      "price": 50000,
+      "effects": {
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Iron mouse",
+      "requirements": {},
+      "price": 5000000,
+      "effects": {
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Forwards from grandma",
+      "requirements": {
+        "Grandma": 1
+      },
+      "price": 1000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Steel-plated rolling pins",
+      "requirements": {
+        "Grandma": 1
+      },
+      "price": 10000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Lubricated dentures",
+      "requirements": {
+        "Grandma": 10
+      },
+      "price": 100000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Prune juice",
+      "requirements": {
+        "Grandma": 50
+      },
+      "price": 5000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Farmer grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Farm": 15
+      },
+      "price": 50000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Worker grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Factory": 15
+      },
+      "price": 300000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Miner grandmas",
+      "requirements": {
+        "Grandma": 1,
+        "Mine": 15
+      },
+      "price": 1000000,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Cheap hoes",
+      "requirements": {
+        "Farm": 1
+      },
+      "price": 5000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Fertilizer",
+      "requirements": {
+        "Farm": 1
+      },
+      "price": 50000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Cookie trees",
+      "requirements": {
+        "Farm": 10
+      },
+      "price": 500000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Genetically-modified cookies",
+      "requirements": {
+        "Farm": 50
+      },
+      "price": 25000000,
+      "effects": {
+        "Farm": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Sturdier conveyor belts",
+      "requirements": {
+        "Factory": 1
+      },
+      "price": 30000,
+      "effects": {
+        "Factory": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Child labor",
+      "requirements": {
+        "Factory": 1
+      },
+      "price": 300000,
+      "effects": {
+        "Factory": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Sweatshop",
+      "requirements": {
+        "Factory": 10
+      },
+      "price": 3000000,
+      "effects": {
+        "Factory": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Sugar gas",
+      "requirements": {
+        "Mine": 1
+      },
+      "price": 100000,
+      "effects": {
+        "Mine": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Mega drill",
+      "requirements": {
+        "Mine": 1
+      },
+      "price": 1000000,
+      "effects": {
+        "Mine": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Ultradrill",
+      "requirements": {
+        "Mine": 10
+      },
+      "price": 10000000,
+      "effects": {
+        "Mine": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Vanilla nebulae",
+      "requirements": {
+        "Shipment": 1
+      },
+      "price": 400000,
+      "effects": {
+        "Shipment": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Wormholes",
+      "requirements": {
+        "Shipment": 1
+      },
+      "price": 4000000,
+      "effects": {
+        "Shipment": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Antimony",
+      "requirements": {
+        "Alchemy lab": 1
+      },
+      "price": 2000000,
+      "effects": {
+        "Alchemy lab": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Essence of dough",
+      "requirements": {
+        "Alchemy lab": 1
+      },
+      "price": 20000000,
+      "effects": {
+        "Alchemy lab": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Ancient tablet",
+      "requirements": {
+        "Portal": 1
+      },
+      "price": 16667000.000000002,
+      "effects": {
+        "Portal": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Insane oatling workers",
+      "requirements": {
+        "Portal": 1
+      },
+      "price": 166667000,
+      "effects": {
+        "Portal": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Santas legacy",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Increased merriness",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Improved jolliness",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Reindeer baking grounds",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Ho ho ho-flavored frosting",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Toy workshop",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Season savings",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Lump of coal",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "An itchy sweater",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Santas helpers",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "mouse": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Naughty list",
+      "requirements": {},
+      "price": 2525,
+      "effects": {
+        "Grandma": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "<Festive tree>",
+      "requirements": {},
+      "price": 256,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "<Festive present>",
+      "requirements": {},
+      "price": 3125,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "<Festive elf fetus>",
+      "requirements": {},
+      "price": 46656,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    },
+    {
+      "name": "Elf toddler",
+      "requirements": {},
+      "price": 823543,
+      "effects": {
+        "all": {
+          "type": "multiplier",
+          "params": [
+            2
+          ],
+          "priority": 2
+        }
+      }
+    }
+  ]
+}
