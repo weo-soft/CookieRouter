@@ -5,6 +5,12 @@ on:
     branches:
       - main
       - master
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 permissions:
@@ -37,12 +43,22 @@ jobs:
         env:
           BASE_PATH: /
 
+      - name: Verify CNAME file exists
+        run: |
+          if [ ! -f dist/CNAME ]; then
+            echo "Error: CNAME file not found in dist directory"
+            exit 1
+          fi
+          echo "CNAME file found:"
+          cat dist/CNAME
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
   deploy:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
