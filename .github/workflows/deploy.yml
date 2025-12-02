@@ -43,14 +43,54 @@ jobs:
         env:
           BASE_PATH: /
 
-      - name: Verify CNAME file exists
+      - name: Ensure CNAME file exists
         run: |
           if [ ! -f dist/CNAME ]; then
-            echo "Error: CNAME file not found in dist directory"
+            echo "CNAME file not found in dist, copying from public..."
+            if [ -f public/CNAME ]; then
+              cp public/CNAME dist/CNAME
+            elif [ -f CNAME ]; then
+              cp CNAME dist/CNAME
+            else
+              echo "cookierouter.weosoft.org" > dist/CNAME
+            fi
+          fi
+          echo "CNAME file contents:"
+          cat dist/CNAME
+
+      - name: Verify build output
+        run: |
+          echo "Build output structure:"
+          ls -la dist/ | head -20
+          echo ""
+          echo "Checking for index.html:"
+          if [ -f dist/index.html ]; then
+            echo "✓ index.html found"
+            echo "First few lines of index.html:"
+            head -10 dist/index.html
+          else
+            echo "✗ index.html NOT found!"
             exit 1
           fi
-          echo "CNAME file found:"
-          cat dist/CNAME
+          echo ""
+          echo "Checking for 404.html:"
+          if [ -f dist/404.html ]; then
+            echo "✓ 404.html found"
+          else
+            echo "⚠ 404.html not found (will be created)"
+            if [ -f public/404.html ]; then
+              cp public/404.html dist/404.html
+              echo "✓ 404.html copied from public"
+            fi
+          fi
+          echo ""
+          echo "Checking for assets directory:"
+          if [ -d dist/assets ]; then
+            echo "✓ assets directory found"
+            ls -la dist/assets/ | head -10
+          else
+            echo "⚠ assets directory not found"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
