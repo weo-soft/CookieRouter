@@ -166,9 +166,13 @@ export class WizardSummary {
   attachEventListeners() {
     const calculateBtn = this.container.querySelector('#calculate-route-btn');
     if (calculateBtn) {
+      console.log('[WizardSummary] Attaching click handler to calculate button');
       calculateBtn.addEventListener('click', () => {
+        console.log('[WizardSummary] Calculate button clicked!');
         this.handleCalculate();
       });
+    } else {
+      console.warn('[WizardSummary] Calculate button not found!');
     }
   }
 
@@ -176,19 +180,33 @@ export class WizardSummary {
    * Handle calculate button click
    */
   async handleCalculate() {
-    if (this.isCalculating || !this.canCalculate()) return;
+    console.log('[WizardSummary] handleCalculate() called', { isCalculating: this.isCalculating, canCalculate: this.canCalculate() });
+    
+    if (this.isCalculating || !this.canCalculate()) {
+      console.log('[WizardSummary] Cannot calculate - already calculating or invalid state');
+      return;
+    }
 
     if (this.onCalculate) {
+      console.log('[WizardSummary] Starting calculation...');
       this.isCalculating = true;
       this.render();
       
       try {
+        console.log('[WizardSummary] Calling onCalculate callback...');
         await this.onCalculate();
+        console.log('[WizardSummary] onCalculate completed successfully');
+        // On success, wizard will close, so we don't need to reset state here
+        // But reset it anyway in case wizard doesn't close for some reason
+        this.isCalculating = false;
       } catch (error) {
+        console.error('[WizardSummary] Error in onCalculate:', error);
         this.showError(error.message || 'Failed to calculate route');
         this.isCalculating = false;
         this.render();
       }
+    } else {
+      console.error('[WizardSummary] No onCalculate callback registered!');
     }
   }
 

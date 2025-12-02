@@ -383,6 +383,10 @@ export function extractPlayerMetadata(decodedSave) {
  *   - Odd bit (1, 3, 5, ...): bought status
  * - Example: bit 0 = upgrade 0 unlocked, bit 1 = upgrade 0 bought
  * 
+ * IMPORTANT: The bitfield order MUST match Cookie Clicker's Game.UpgradesById array order.
+ * Upgrade ID 0 = bitfield index 0, Upgrade ID 1 = bitfield index 1, etc.
+ * The version file's menu Set must have upgrades in the exact same order as Game.UpgradesById.
+ * 
  * @param {string} decodedSave - Decoded save string
  * @param {string} versionId - Game version ID
  * @returns {Promise<{purchased: string[], unlocked: string[]}>} Promise resolving to object with purchased and unlocked upgrade arrays
@@ -397,21 +401,21 @@ export async function extractUpgrades(decodedSave, versionId) {
   
   const upgradesBitfield = sections[6];
   
-  // Load upgrade names from version data
-  let upgradeNames = [];
+  // Load upgrade objects from version data, indexed by ID
+  let upgradesById = [];
   try {
     const versionModules = await import(`../data/versions/${versionId}.js`);
     const version = versionModules.default;
     
-    // Convert menu Set to array of upgrade names
-    // Note: The order in the Set should match the order upgrades appear in the bitfield
-    if (version.menu && version.menu instanceof Set) {
-      upgradeNames = Array.from(version.menu).map(upgrade => upgrade.name);
-    } else if (Array.isArray(version.menu)) {
-      upgradeNames = version.menu.map(upgrade => upgrade.name || upgrade);
+    // Ensure version.upgradesById is an array of upgrade objects, indexed by their ID
+    if (version.upgradesById && Array.isArray(version.upgradesById)) {
+      upgradesById = version.upgradesById;
+    } else {
+      console.error(`[SaveGameParser] version.upgradesById is not correctly defined for ${versionId}.`);
+      return { purchased: [], unlocked: [] };
     }
   } catch (error) {
-    console.warn(`Failed to load version ${versionId} for upgrade mapping:`, error);
+    console.error(`[SaveGameParser] Error loading version data for ${versionId}:`, error);
     return { purchased: [], unlocked: [] };
   }
   
@@ -419,22 +423,31 @@ export async function extractUpgrades(decodedSave, versionId) {
   const unlockedUpgrades = [];
   
   // Parse bitfield: check both even bits (unlocked) and odd bits (bought)
-  // Upgrade index = bit index / 2 (integer division)
-  for (let bitIndex = 0; bitIndex < upgradesBitfield.length; bitIndex += 2) {
-    const upgradeIndex = Math.floor(bitIndex / 2);
-    if (upgradeIndex >= upgradeNames.length) break;
-    
-    const unlockedBit = upgradesBitfield[bitIndex];
-    const boughtBit = upgradesBitfield[bitIndex + 1] || '0';
-    
-    // Check unlocked status (even bits)
-    if (unlockedBit === '1') {
-      unlockedUpgrades.push(upgradeNames[upgradeIndex]);
+  // The bit index directly corresponds to the upgrade ID.
+  // Even bits are 'unlocked', odd bits are 'bought'.
+  for (let upgradeId = 0; upgradeId < upgradesById.length; upgradeId++) {
+    const upgrade = upgradesById[upgradeId];
+    if (!upgrade) {
+      // No upgrade with this ID in our data, skip
+      continue;
     }
     
-    // Check bought status (odd bits)
-    if (boughtBit === '1') {
-      purchasedUpgrades.push(upgradeNames[upgradeIndex]);
+    const unlockedBitIndex = upgradeId * 2;
+    const boughtBitIndex = upgradeId * 2 + 1;
+    
+    const unlockedBit = upgradesBitfield[unlockedBitIndex];
+    const boughtBit = upgradesBitfield[boughtBitIndex] || '0'; // Default to '0' if bit is missing
+    
+    // Check unlocked status
+    if (unlockedBit === '1') {
+      unlockedUpgrades.push(upgrade.name);
+    }
+    
+    // Check bought status
+    // An upgrade is considered purchased if both the unlocked and bought bits are set.
+    // We trust the save game data directly from Cookie Clicker.
+    if (unlockedBit === '1' && boughtBit === '1') {
+      purchasedUpgrades.push(upgrade.name);
     }
   }
   

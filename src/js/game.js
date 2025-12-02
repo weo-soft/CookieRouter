@@ -3,12 +3,15 @@
  * Ported from Python game.py
  */
 
+import { getAchievementRequirement } from '../data/achievement-requirements.js';
+
 export class Upgrade {
-  constructor(name, req, price, effects) {
+  constructor(name, req, price, effects, id = null) {
     this.name = name;
     this.req = req;
     this.price = price;
     this.effects = effects;
+    this.id = id; // Cookie Clicker upgrade ID - corresponds to position in Game.UpgradesById array
   }
 }
 
@@ -48,6 +51,14 @@ export class Game {
       this.targetCookies = 0;
       this.hardcoreMode = false;
       this.history = [];
+      // Achievement goal tracking
+      this.targetCps = null;
+      this.targetBuilding = null; // { name: string, count: number }
+      this.targetUpgradeCount = null;
+      this.targetTotalBuildings = null;
+      this.targetMinBuildings = null; // minimum count across all building types
+      this.targetBuildingLevel = null; // { building: string, level: number }
+      this.achievementGoals = []; // Array of achievement IDs being targeted
     } else {
       // Version data from parent
       this.buildingNames = [...parent.buildingNames];
@@ -68,6 +79,14 @@ export class Game {
       this.targetCookies = parent.targetCookies;
       this.hardcoreMode = parent.hardcoreMode;
       this.history = [...parent.history];
+      // Achievement goal tracking
+      this.targetCps = parent.targetCps;
+      this.targetBuilding = parent.targetBuilding ? { ...parent.targetBuilding } : null;
+      this.targetUpgradeCount = parent.targetUpgradeCount;
+      this.targetTotalBuildings = parent.targetTotalBuildings;
+      this.targetMinBuildings = parent.targetMinBuildings;
+      this.targetBuildingLevel = parent.targetBuildingLevel ? { ...parent.targetBuildingLevel } : null;
+      this.achievementGoals = [...parent.achievementGoals];
     }
   }
 
@@ -189,7 +208,11 @@ export class Game {
    */
   spend(price) {
     // Make sure we don't overshoot our target
-    if (this.totalCookies + price > this.targetCookies) {
+    // For achievement routes, targetCookies may be 0, so we need to check if we have achievement goals
+    const hasAchievementGoals = this.achievementGoals && this.achievementGoals.length > 0;
+    const shouldCheckTarget = this.targetCookies > 0 || !hasAchievementGoals;
+    
+    if (shouldCheckTarget && this.totalCookies + price > this.targetCookies) {
       // If we're close, just advance to target
       if (this.totalCookies < this.targetCookies) {
         const remaining = this.targetCookies - this.totalCookies;
@@ -252,6 +275,91 @@ export class Game {
     }
     this.history.push(upgrade.name);
     this.menu.delete(upgrade);
+    return true;
+  }
+
+  /**
+   * Checks if all active achievement goals are satisfied.
+   * Evaluates each achievement goal individually to properly handle multiple building goals.
+   * 
+   * @returns {boolean} True if all achievement goals are met, false otherwise
+   */
+  isAchievementGoalMet() {
+    // If no achievement goals, check cookie target only
+    if (!this.achievementGoals || this.achievementGoals.length === 0) {
+      return this.totalCookies >= this.targetCookies;
+    }
+    
+    // Track if we found any valid requirements to check
+    let foundValidRequirement = false;
+    
+    // Check each achievement goal individually
+    // This allows proper handling of multiple building goals
+    for (const achievementId of this.achievementGoals) {
+      const requirement = getAchievementRequirement(achievementId);
+      if (!requirement || requirement.type === 'notRouteable') {
+        continue;
+      }
+      
+      foundValidRequirement = true;
+      
+      // Check each requirement type
+      switch (requirement.type) {
+        case 'buildingCount':
+          const current = this.numBuildings[requirement.building] || 0;
+          if (current < requirement.count) {
+            return false;
+          }
+          break;
+        case 'cps':
+          if (this.rate() < requirement.value) {
+            return false;
+          }
+          break;
+        case 'totalCookies':
+          if (this.totalCookies < requirement.value) {
+            return false;
+          }
+          break;
+        case 'upgradeCount':
+          const upgradeCount = this.history.filter(item => !this.buildingNames.includes(item)).length;
+          if (upgradeCount < requirement.count) {
+            return false;
+          }
+          break;
+        case 'totalBuildings':
+          const total = Object.values(this.numBuildings).reduce((sum, count) => sum + count, 0);
+          if (total < requirement.count) {
+            return false;
+          }
+          break;
+        case 'minBuildings':
+          const buildingCounts = Object.values(this.numBuildings);
+          if (buildingCounts.length === 0) {
+            return false;
+          }
+          const min = Math.min(...buildingCounts);
+          if (min < requirement.count) {
+            return false;
+          }
+          break;
+        case 'buildingLevel':
+          // For building levels, check that building exists (leveling requires manual sugar lumps)
+          const buildingCount = this.numBuildings[requirement.building] || 0;
+          if (buildingCount < 1) {
+            return false;
+          }
+          // TODO: Add sugar lump simulation for full level support
+          break;
+      }
+    }
+    
+    // If we have achievement goals but no valid requirements were found, return false
+    // (This shouldn't happen in normal flow, but prevents false positives)
+    if (!foundValidRequirement) {
+      return false;
+    }
+    
     return true;
   }
 }
