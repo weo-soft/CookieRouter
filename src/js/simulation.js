@@ -127,6 +127,12 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     }
   }
 
+  // Apply initial cookie count from imported save game if available
+  // This allows routes to start with available cookies, enabling immediate purchases of expensive buildings
+  if (importedSaveGame && importedSaveGame.totalCookies !== undefined && importedSaveGame.totalCookies > 0) {
+    game.totalCookies = importedSaveGame.totalCookies;
+  }
+
   // Apply purchased upgrades from imported save and manual setup
   let purchasedUpgrades = [];
   if (importedSaveGame && importedSaveGame.upgrades) {

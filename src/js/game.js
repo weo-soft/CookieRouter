@@ -44,6 +44,7 @@ export class Game {
       this.effects['mouse'] = [];
       this.effects['all'] = [];
       this.totalCookies = 0;
+      this.cookiesSpent = 0; // Track cookies spent to calculate available cookies
       this.timeElapsed = 0;
       this.playerCps = 0;
       this.playerDelay = 0;
@@ -72,6 +73,7 @@ export class Game {
         this.effects[name] = [...parent.effects[name]];
       }
       this.totalCookies = parent.totalCookies;
+      this.cookiesSpent = parent.cookiesSpent;
       this.timeElapsed = parent.timeElapsed;
       this.playerCps = parent.playerCps;
       this.playerDelay = parent.playerDelay;
@@ -205,8 +207,12 @@ export class Game {
    * Spends a given amount of cookies. Also updates time and other such.
    * Note: totalCookies represents cookies produced. When we "spend", we're
    * simulating earning enough cookies to make the purchase.
+   * If we already have enough cookies available, the purchase happens immediately.
    */
   spend(price) {
+    // Calculate available cookies (total produced minus spent)
+    const availableCookies = this.totalCookies - this.cookiesSpent;
+    
     // Make sure we don't overshoot our target
     // For achievement routes, targetCookies may be 0, so we need to check if we have achievement goals
     const hasAchievementGoals = this.achievementGoals && this.achievementGoals.length > 0;
@@ -222,12 +228,34 @@ export class Game {
       }
       return false;
     }
-    this.totalCookies += price;
 
-    // How long would it take to save up 'price' with just buildings?
+    // Check if we already have enough cookies available
+    // If so, we can purchase immediately without waiting
+    if (availableCookies >= price) {
+      // We have enough cookies, so we can buy immediately
+      // Just increment cookiesSpent - we're spending from what we already have
+      // totalCookies stays the same (total produced doesn't change when spending existing cookies)
+      this.cookiesSpent += price;
+      // Add a small delay for the purchase action (playerDelay)
+      if (this.playerDelay > 0) {
+        this.timeElapsed += this.playerDelay;
+      }
+      return true;
+    }
+
+    // We don't have enough cookies, so we need to earn more
+    // Calculate how much more we need
+    const cookiesNeeded = price - availableCookies;
+    // Add only the needed amount to totalCookies (we'll earn the needed amount)
+    // This simulates producing enough cookies to make the purchase
+    this.totalCookies += cookiesNeeded;
+    // Increment cookiesSpent by the full price to track the purchase
+    this.cookiesSpent += price;
+
+    // How long would it take to save up 'cookiesNeeded' with just buildings?
     let buildingOnlyTime = null;
     if (this.buildingOnlyRate()) {
-      buildingOnlyTime = price / this.buildingOnlyRate();
+      buildingOnlyTime = cookiesNeeded / this.buildingOnlyRate();
     }
 
     // This simulates the loss of cookies during a purchase when you
@@ -237,7 +265,7 @@ export class Game {
       // time it would take to save up for the purchase with only buildings.
       // Ergo, the mouse will provide some amount of clicks towards this
       // purchase.
-      const sharedMousePrice = price - this.playerDelay * this.buildingOnlyRate();
+      const sharedMousePrice = cookiesNeeded - this.playerDelay * this.buildingOnlyRate();
       // The amount of time during saving up for which the mouse and the
       // buildings are both contributing
       const mouseActiveTime = sharedMousePrice / this.rate();

@@ -256,13 +256,19 @@ export function extractGameStats(decodedSave) {
     cookiesForfeited: undefined
   };
   
-  // Game stats are typically in section 4
-  // Format: "totalCookies;cookiesPerSecond;playerCps;playerDelay;...;timeElapsed;..."
+  // Game stats are in section 4
+  // According to Cookie Clicker wiki (https://cookieclicker.wiki.gg/wiki/Save#Save_format):
+  // Section 4 contains "Misc game data" with fields like:
+  // - parts[0]: Game.cookies (Cookies in bank)
+  // - parts[1]: Game.cookiesEarned (Cookies baked this ascension)
+  // - parts[2]: Game.cookieClicks (Cookie clicks this ascension)
+  // - parts[3]: Game.goldenClicks (Golden cookie clicks all time)
+  // Note: cookiesPerSecond is NOT stored in the save - it's calculated dynamically from buildings/upgrades
   if (sections.length > 4 && sections[4]) {
     const statsSection = sections[4];
     const parts = statsSection.split(';');
     
-    // First value is total cookies
+    // First value is cookies in bank (Game.cookies)
     if (parts[0]) {
       const totalCookies = parseFloat(parts[0]);
       if (!isNaN(totalCookies) && totalCookies >= 0) {
@@ -270,29 +276,19 @@ export function extractGameStats(decodedSave) {
       }
     }
     
-    // Second value is cookies per second
+    // Second value is cookies earned/baked this ascension (Game.cookiesEarned)
     if (parts[1]) {
-      const cookiesPerSecond = parseFloat(parts[1]);
-      if (!isNaN(cookiesPerSecond) && cookiesPerSecond >= 0) {
-        stats.cookiesPerSecond = cookiesPerSecond;
+      const cookiesEarned = parseFloat(parts[1]);
+      if (!isNaN(cookiesEarned) && cookiesEarned >= 0) {
+        stats.cookiesEarned = cookiesEarned;
       }
     }
     
-    // Player CPS is typically around index 2-3
-    if (parts[2]) {
-      const playerCps = parseFloat(parts[2]);
-      if (!isNaN(playerCps) && playerCps >= 0) {
-        stats.playerCps = playerCps;
-      }
-    }
+    // Third value is cookie clicks this ascension (Game.cookieClicks)
+    // Not currently used, but stored for reference
     
-    // Player delay
-    if (parts[3]) {
-      const playerDelay = parseFloat(parts[3]);
-      if (!isNaN(playerDelay) && playerDelay >= 0) {
-        stats.playerDelay = playerDelay;
-      }
-    }
+    // Player CPS and delay are not directly in section 4 according to wiki
+    // They may be in other sections or need to be calculated
     
     // Time elapsed is typically later in the section
     // Look for a reasonable time value (usually > 0)
