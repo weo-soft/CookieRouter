@@ -120,7 +120,7 @@ export class RouteDisplay {
     if (!route) {
       this.currentRoute = null;
       this.progress = null;
-      this.render();
+      await this.render();
       return;
     }
 
@@ -162,13 +162,13 @@ export class RouteDisplay {
       };
       saveProgress(this.progress);
     }
-    this.render();
+    await this.render();
   }
 
   /**
    * Render the route display
    */
-  render() {
+  async render() {
     if (!this.container || !this.currentRoute) {
       this.container.innerHTML = '<p class="empty-state">No route selected. Select a category and calculate a route.</p>';
       return;
@@ -182,6 +182,9 @@ export class RouteDisplay {
     const completedCount = this.progress.completedBuildings.length;
     const totalCount = buildings.length;
     const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+    // Get route summary HTML (async)
+    const routeSummaryHtml = await this.renderRouteSummary();
 
     this.container.innerHTML = `
       <div class="route-header">
@@ -219,7 +222,7 @@ export class RouteDisplay {
           <span class="progress-text">${completedCount} / ${totalCount} completed</span>
         </div>
       </div>
-      ${this.renderRouteSummary()}
+      ${routeSummaryHtml}
       <div class="route-list" role="list">
         ${(() => {
           // Pre-calculate all step values efficiently (only calculate each step once)
@@ -373,6 +376,9 @@ export class RouteDisplay {
 
     // Attach tooltip event listeners
     this.attachTooltipListeners();
+    
+    // Attach building upgrades tooltip listeners
+    this.attachBuildingUpgradesTooltipListeners();
 
     // Attach route summary toggle listener
     const summaryToggle = this.container.querySelector('.route-summary-toggle');
@@ -419,7 +425,7 @@ export class RouteDisplay {
   /**
    * Reset all progress - uncheck all steps
    */
-  resetAllProgress() {
+  async resetAllProgress() {
     if (!this.currentRoute) return;
     
     // Clear progress from storage
@@ -436,14 +442,14 @@ export class RouteDisplay {
     saveProgress(this.progress);
     
     // Re-render to update the UI
-    this.render();
+    await this.render();
   }
 
   /**
    * Check all previous steps up to and including the given step
    * @param {number} stepOrder - The step order to check up to
    */
-  checkAllPreviousSteps(stepOrder) {
+  async checkAllPreviousSteps(stepOrder) {
     if (!this.currentRoute) return;
     if (!stepOrder || stepOrder < 1) return;
     
@@ -495,13 +501,13 @@ export class RouteDisplay {
       }
     }
     
-    this.render(); // Re-render to update progress bar and checkboxes
+    await this.render(); // Re-render to update progress bar and checkboxes
   }
 
   /**
    * Toggle a step's completion status
    */
-  toggleStep(stepOrder, completed) {
+  async toggleStep(stepOrder, completed) {
     if (!this.currentRoute) return;
     
     // Ensure progress exists
@@ -546,7 +552,7 @@ export class RouteDisplay {
       }
     }
     
-    this.render(); // Re-render to update progress bar
+    await this.render(); // Re-render to update progress bar
   }
 
   /**
@@ -770,6 +776,132 @@ export class RouteDisplay {
   }
 
   /**
+   * Attach tooltip event listeners to building upgrade icons
+   */
+  attachBuildingUpgradesTooltipListeners() {
+    const upgradeIcons = this.container.querySelectorAll('.summary-building-upgrades-icon');
+
+    // Create tooltip element if it doesn't exist
+    if (!this.tooltipElement) {
+      this.tooltipElement = document.createElement('div');
+      this.tooltipElement.className = 'route-step-tooltip';
+      this.tooltipElement.style.display = 'none';
+      document.body.appendChild(this.tooltipElement);
+    }
+
+    upgradeIcons.forEach(iconElement => {
+      const buildingName = iconElement.getAttribute('data-building-name');
+      const upgradesJsonEncoded = iconElement.getAttribute('data-upgrades');
+      if (!buildingName || !upgradesJsonEncoded) return;
+
+      let upgrades = [];
+      try {
+        const upgradesJson = decodeURIComponent(upgradesJsonEncoded);
+        upgrades = JSON.parse(upgradesJson);
+      } catch (e) {
+        console.warn('Failed to parse upgrades JSON:', e);
+        return;
+      }
+
+      if (upgrades.length === 0) return;
+
+      const showTooltip = (e) => {
+        if (!this.tooltipElement) return;
+        
+        const tooltipContent = this.formatBuildingUpgradesTooltip(buildingName, upgrades);
+        this.tooltipElement.innerHTML = tooltipContent;
+        this.tooltipElement.style.display = 'block';
+        
+        // Force reflow to get accurate dimensions
+        this.tooltipElement.offsetHeight;
+        
+        // Position tooltip at mouse location
+        const updateTooltipPosition = (mouseEvent) => {
+          if (!this.tooltipElement) return;
+          
+          const tooltipRect = this.tooltipElement.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+          
+          // Get mouse coordinates
+          let mouseX = mouseEvent.clientX + scrollLeft;
+          let mouseY = mouseEvent.clientY + scrollTop;
+          
+          // Offset tooltip slightly from cursor
+          const offsetX = 15;
+          const offsetY = 15;
+          
+          let left = mouseX + offsetX;
+          let top = mouseY + offsetY;
+          
+          // Adjust if tooltip would go off screen
+          if (left + tooltipRect.width > window.innerWidth + scrollLeft - 10) {
+            left = mouseX - tooltipRect.width - offsetX;
+          }
+          if (top + tooltipRect.height > window.innerHeight + scrollTop - 10) {
+            top = mouseY - tooltipRect.height - offsetY;
+          }
+          if (left < scrollLeft + 10) {
+            left = scrollLeft + 10;
+          }
+          if (top < scrollTop + 10) {
+            top = scrollTop + 10;
+          }
+          
+          this.tooltipElement.style.top = `${top}px`;
+          this.tooltipElement.style.left = `${left}px`;
+        };
+        
+        // Initial position
+        updateTooltipPosition(e);
+        
+        // Update position as mouse moves
+        const mouseMoveHandler = (moveEvent) => {
+          updateTooltipPosition(moveEvent);
+        };
+        
+        iconElement.addEventListener('mousemove', mouseMoveHandler);
+        
+        // Store handler for cleanup
+        iconElement._tooltipMouseMoveHandler = mouseMoveHandler;
+      };
+
+      const hideTooltip = () => {
+        if (this.tooltipElement) {
+          this.tooltipElement.style.display = 'none';
+        }
+        // Remove mousemove handler
+        if (iconElement._tooltipMouseMoveHandler) {
+          iconElement.removeEventListener('mousemove', iconElement._tooltipMouseMoveHandler);
+          delete iconElement._tooltipMouseMoveHandler;
+        }
+      };
+
+      iconElement.addEventListener('mouseenter', showTooltip);
+      iconElement.addEventListener('mouseleave', hideTooltip);
+      iconElement.addEventListener('focus', showTooltip);
+      iconElement.addEventListener('blur', hideTooltip);
+    });
+  }
+
+  /**
+   * Format building upgrades tooltip content
+   * @param {string} buildingName - Name of the building
+   * @param {Array<string>} upgrades - Array of upgrade names
+   * @returns {string} HTML string for tooltip
+   */
+  formatBuildingUpgradesTooltip(buildingName, upgrades) {
+    let html = '<div class="route-summary-tooltip">';
+    html += `<div class="summary-section"><strong>${this.escapeHtml(buildingName)} Upgrades:</strong><ul class="summary-list">`;
+    for (const upgradeName of upgrades.sort()) {
+      html += `<li>${this.escapeHtml(upgradeName)}</li>`;
+    }
+    html += '</ul></div>';
+    html += '</div>';
+    return html;
+  }
+
+  /**
    * Calculate summary of buildings and upgrades up to a given step
    * @param {number} stepOrder - Step order to calculate summary up to (inclusive)
    * @returns {Object} Summary object with buildings and upgrades
@@ -804,9 +936,9 @@ export class RouteDisplay {
 
   /**
    * Render the permanent route summary section
-   * @returns {string} HTML string for the summary section
+   * @returns {Promise<string>} HTML string for the summary section
    */
-  renderRouteSummary() {
+  async renderRouteSummary() {
     if (!this.currentRoute || !this.currentRoute.buildings || this.currentRoute.buildings.length === 0) {
       return '';
     }
@@ -815,16 +947,104 @@ export class RouteDisplay {
     const finalStepOrder = this.currentRoute.buildings.length;
     const summary = this.calculateSummaryUpToStep(finalStepOrder);
     
-    return this.formatSummaryDisplay(summary);
+    return await this.formatSummaryDisplay(summary);
+  }
+
+  /**
+   * Map upgrades to their related buildings based on upgrade effects
+   * @param {Array<string>} upgradeNames - Array of upgrade names
+   * @param {Object} buildings - Buildings object from summary
+   * @param {string} versionId - Version ID to load upgrade data
+   * @returns {Promise<Object>} Object with upgradeToBuildings Map and globalUpgrades Array
+   */
+  async mapUpgradesToBuildings(upgradeNames, buildings, versionId) {
+    const upgradeToBuildings = new Map();
+    const globalUpgrades = [];
+    
+    if (!upgradeNames || upgradeNames.length === 0) {
+      return { upgradeToBuildings, globalUpgrades };
+    }
+    
+    try {
+      const { loadVersionById } = await import('../utils/version-loader.js');
+      const version = await loadVersionById(versionId || this.currentVersionId || 'v2052');
+      
+      if (!version || !version.menu) {
+        return { upgradeToBuildings, globalUpgrades };
+      }
+      
+      // Create a map of upgrade names to Upgrade objects
+      const upgradeMap = new Map();
+      for (const upgrade of version.menu) {
+        upgradeMap.set(upgrade.name, upgrade);
+      }
+      
+      // Get list of buildings in the route
+      const routeBuildings = Object.keys(buildings).filter(b => buildings[b] > 0);
+      
+      // For each upgrade in the route, find which buildings it affects
+      for (const upgradeName of upgradeNames) {
+        const upgrade = upgradeMap.get(upgradeName);
+        if (!upgrade || !upgrade.effects) {
+          // If we can't find the upgrade definition, add to global upgrades
+          globalUpgrades.push(upgradeName);
+          continue;
+        }
+        
+        // Get all buildings affected by this upgrade
+        const affectedBuildings = new Set();
+        let isGlobalUpgrade = false;
+        
+        for (const target in upgrade.effects) {
+          if (target === 'mouse') {
+            // Mouse upgrades affect Cursor
+            if (routeBuildings.includes('Cursor')) {
+              affectedBuildings.add('Cursor');
+            }
+          } else if (target === 'all') {
+            // Global upgrades affect all buildings
+            isGlobalUpgrade = true;
+            break; // Exit early, this is definitely a global upgrade
+          } else if (version.buildingNames && version.buildingNames.includes(target) && routeBuildings.includes(target)) {
+            // Direct building target that exists in the route
+            affectedBuildings.add(target);
+          }
+        }
+        
+        // If it's a global upgrade or affects multiple buildings, add to global section
+        if (isGlobalUpgrade || affectedBuildings.size > 1) {
+          globalUpgrades.push(upgradeName);
+        } else if (affectedBuildings.size === 1) {
+          // Upgrade affects exactly one building - add it to that building
+          const buildingName = Array.from(affectedBuildings)[0];
+          if (!upgradeToBuildings.has(buildingName)) {
+            upgradeToBuildings.set(buildingName, []);
+          }
+          upgradeToBuildings.get(buildingName).push(upgradeName);
+        } else {
+          // If we can't determine which building, add to global upgrades
+          globalUpgrades.push(upgradeName);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to map upgrades to buildings:', error);
+      // Fallback: add all upgrades to global upgrades
+      globalUpgrades.push(...upgradeNames);
+    }
+    
+    return { upgradeToBuildings, globalUpgrades };
   }
 
   /**
    * Format summary as HTML for permanent display
    * @param {Object} summary - Summary object with buildings and upgrades
-   * @returns {string} HTML string for the summary section
+   * @returns {Promise<string>} HTML string for the summary section
    */
-  formatSummaryDisplay(summary) {
+  async formatSummaryDisplay(summary) {
     const { buildings, upgrades } = summary;
+    
+    // Map upgrades to their related buildings
+    const { upgradeToBuildings, globalUpgrades } = await this.mapUpgradesToBuildings(upgrades, buildings, this.currentVersionId);
     
     let html = '<div class="route-summary-section">';
     
@@ -839,7 +1059,7 @@ export class RouteDisplay {
     // Content wrapper with collapsible class - collapsed by default
     html += '<div class="route-summary-content collapsed">';
     
-    // Buildings section - sort by game order
+    // Buildings section - sort by game order, with upgrades grouped under each building
     const buildingEntries = Object.entries(buildings)
       .filter(([_, count]) => count > 0);
     const sortedBuildingEntries = this.sortBuildingsByOrder(buildingEntries);
@@ -850,20 +1070,30 @@ export class RouteDisplay {
       html += '<div class="summary-buildings-grid">';
       for (const [buildingName, count] of sortedBuildingEntries) {
         html += `<div class="summary-building-item">`;
+        html += `<div class="summary-building-header">`;
         html += `<span class="summary-building-name">${this.escapeHtml(buildingName)}</span>`;
+        
+        // Show upgrades icon if building has upgrades
+        const buildingUpgrades = upgradeToBuildings.get(buildingName) || [];
+        if (buildingUpgrades.length > 0) {
+          const upgradesJson = encodeURIComponent(JSON.stringify(buildingUpgrades.sort()));
+          html += `<span class="summary-building-upgrades-icon" data-building-name="${this.escapeHtml(buildingName)}" data-upgrades="${upgradesJson}" aria-label="Show upgrades for ${this.escapeHtml(buildingName)}" tabindex="0">⚡</span>`;
+        }
+        
         html += `<span class="summary-building-count">${count}</span>`;
+        html += `</div>`;
         html += `</div>`;
       }
       html += '</div>';
       html += '</div>';
     }
     
-    // Upgrades section
-    if (upgrades.length > 0) {
+    // Show global upgrades (affect multiple buildings or all buildings)
+    if (globalUpgrades.length > 0) {
       html += '<div class="summary-section-upgrades">';
-      html += '<h4 class="summary-section-title">Upgrades</h4>';
+      html += '<h4 class="summary-section-title">Global Upgrades</h4>';
       html += '<div class="summary-upgrades-list">';
-      for (const upgradeName of upgrades.sort()) {
+      for (const upgradeName of globalUpgrades.sort()) {
         html += `<div class="summary-upgrade-item">${this.escapeHtml(upgradeName)}</div>`;
       }
       html += '</div>';

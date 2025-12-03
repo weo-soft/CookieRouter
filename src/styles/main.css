@@ -632,8 +632,7 @@ main {
 
 .summary-building-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   padding: 10px 12px;
   background: white;
   border: 1px solid #e0e0e0;
@@ -646,10 +645,41 @@ main {
   border-color: #4a90e2;
 }
 
+.summary-building-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 .summary-building-name {
   font-weight: 500;
   color: #2c3e50;
   flex: 1;
+}
+
+.summary-building-upgrades-icon {
+  font-size: 1rem;
+  color: #ff9800;
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.2s, color 0.2s;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.summary-building-upgrades-icon:hover {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.summary-building-upgrades-icon:focus {
+  outline: 2px solid #ff9800;
+  outline-offset: 2px;
 }
 
 .summary-building-count {
@@ -662,6 +692,21 @@ main {
   border-radius: 4px;
   min-width: 40px;
   text-align: center;
+}
+
+.summary-building-upgrades {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-building-item .summary-upgrade-item {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  margin: 0;
 }
 
 .summary-upgrades-list {
@@ -2456,25 +2501,25 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 12px 16px;
   border-bottom: 1px solid #e0e0e0;
 }
 
 .wizard-header h2 {
   margin: 0;
   color: #2c3e50;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
 }
 
 .wizard-close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: #666;
   cursor: pointer;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2488,7 +2533,7 @@ main {
 }
 
 .wizard-step-indicator-container {
-  padding: 20px 24px;
+  padding: 12px 16px;
   border-bottom: 1px solid #e0e0e0;
 }
 
@@ -2496,7 +2541,7 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .wizard-step {
@@ -2504,7 +2549,7 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px;
+  padding: 6px 4px;
   border-radius: 6px;
   transition: background 0.2s;
   position: relative;
@@ -2540,8 +2585,8 @@ main {
 }
 
 .step-number {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #e0e0e0;
   color: #666;
@@ -2549,14 +2594,16 @@ main {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  margin-bottom: 8px;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
   transition: background 0.2s, color 0.2s;
 }
 
 .step-label {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #666;
   text-align: center;
+  line-height: 1.2;
 }
 
 .wizard-step.active .step-label {
@@ -2566,57 +2613,156 @@ main {
 
 .wizard-content {
   flex: 1;
-  padding: 24px;
+  padding: 16px;
   overflow-y: auto;
 }
 
 .wizard-step-content h2 {
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   color: #2c3e50;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
 }
 
 .step-description {
   color: #666;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
 }
 
 .wizard-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 12px 16px;
   border-top: 1px solid #e0e0e0;
-  gap: 10px;
+  gap: 8px;
 }
 
 .wizard-footer .btn-primary,
 .wizard-footer .btn-secondary {
-  min-width: 100px;
+  min-width: 80px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
 }
 
 /* Responsive design for wizard */
 @media (max-width: 768px) {
   .route-creation-wizard {
-    width: 95%;
+    width: 98%;
     max-height: 95vh;
+  }
+
+  .wizard-header {
+    padding: 10px 12px;
+  }
+
+  .wizard-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .wizard-step-indicator-container {
+    padding: 10px 12px;
   }
 
   .wizard-step-indicator {
     flex-direction: column;
-    gap: 15px;
+    gap: 8px;
+  }
+
+  .wizard-step {
+    padding: 4px;
+  }
+
+  .step-number {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+  }
+
+  .step-label {
+    font-size: 0.7rem;
   }
 
   .wizard-step::after {
     display: none;
   }
 
+  .wizard-content {
+    padding: 12px;
+  }
+
+  .wizard-step-content h2 {
+    font-size: 1rem;
+  }
+
+  .step-description {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+
   .wizard-footer {
     flex-direction: column;
+    padding: 10px 12px;
+    gap: 6px;
   }
 
   .wizard-footer button {
     width: 100%;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .route-creation-wizard {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .wizard-header {
+    padding: 8px 10px;
+  }
+
+  .wizard-header h2 {
+    font-size: 1rem;
+  }
+
+  .wizard-step-indicator-container {
+    padding: 8px 10px;
+  }
+
+  .wizard-content {
+    padding: 10px;
+  }
+
+  .wizard-footer {
+    padding: 8px 10px;
+  }
+
+  #wizard-manual-setup-container .starting-buildings-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 6px;
+  }
+
+  #wizard-manual-setup-container .building-label {
+    width: 120px;
+    flex: 0 0 120px;
+    font-size: 0.85rem;
+  }
+
+  .setup-option,
+  .category-option {
+    padding: 8px 10px;
+  }
+
+  .summary-item {
+    padding: 8px 10px;
+  }
+
+  .calculation-section {
+    padding: 10px;
   }
 }
 
@@ -2624,13 +2770,13 @@ main {
 .setup-options {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .setup-option-wrapper {
   border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: white;
   transition: border-color 0.2s, box-shadow 0.2s;
   overflow: hidden;
@@ -2644,7 +2790,7 @@ main {
 .setup-option {
   display: flex;
   align-items: flex-start;
-  padding: 15px;
+  padding: 10px 12px;
   cursor: pointer;
   transition: background 0.2s;
   background: transparent;
@@ -2663,7 +2809,7 @@ main {
 }
 
 .setup-option input[type="radio"] {
-  margin-right: 12px;
+  margin-right: 10px;
   margin-top: 2px;
   cursor: pointer;
 }
@@ -2675,22 +2821,22 @@ main {
 .option-content strong {
   display: block;
   color: #2c3e50;
-  font-size: 1.1rem;
-  margin-bottom: 5px;
+  font-size: 1rem;
+  margin-bottom: 3px;
 }
 
 .option-content p {
   margin: 0;
   color: #666;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .setup-option-content {
-  padding: 0 15px 15px 15px;
+  padding: 0 12px 12px 12px;
   margin-top: 0;
   background: transparent;
   border-top: 1px solid #e0e0e0;
-  padding-top: 15px;
+  padding-top: 12px;
   animation: slideDown 0.3s ease-out;
   max-height: none;
   overflow: visible;
@@ -2713,11 +2859,11 @@ main {
 
 /* Legacy support - keep for backward compatibility */
 .setup-content {
-  margin-top: 20px;
-  padding: 20px;
+  margin-top: 12px;
+  padding: 12px;
   background: #f8f9fa;
   border-radius: 6px;
-  min-height: 100px;
+  min-height: 80px;
 }
 
 .info-text {
@@ -2748,15 +2894,15 @@ main {
 #wizard-manual-setup-container .starting-buildings-container {
   background: white;
   border-radius: 6px;
-  padding: 12px;
+  padding: 10px;
 }
 
 #wizard-manual-setup-container .starting-buildings-header {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 #wizard-manual-setup-container .starting-buildings-header h3 {
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 #wizard-manual-setup-container .starting-buildings-header .collapse-toggle {
@@ -2989,7 +3135,7 @@ main {
 }
 
 #wizard-manual-setup-container .starting-buildings-section {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 
@@ -2997,13 +3143,13 @@ main {
 .category-options {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .category-option-wrapper {
   border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: white;
   transition: border-color 0.2s, box-shadow 0.2s;
   overflow: hidden;
@@ -3017,7 +3163,7 @@ main {
 .category-option {
   display: flex;
   align-items: flex-start;
-  padding: 15px;
+  padding: 10px 12px;
   cursor: pointer;
   transition: background 0.2s;
   background: transparent;
@@ -3036,17 +3182,17 @@ main {
 }
 
 .category-option input[type="radio"] {
-  margin-right: 12px;
+  margin-right: 10px;
   margin-top: 2px;
   cursor: pointer;
 }
 
 .category-option-content {
-  padding: 0 15px 15px 15px;
+  padding: 0 12px 12px 12px;
   margin-top: 0;
   background: transparent;
   border-top: 1px solid #e0e0e0;
-  padding-top: 15px;
+  padding-top: 12px;
   animation: slideDown 0.3s ease-out;
   max-height: none;
   overflow: visible;
@@ -3058,28 +3204,28 @@ main {
 
 /* Legacy support - keep for backward compatibility */
 .category-content {
-  margin-top: 20px;
-  padding: 20px;
+  margin-top: 12px;
+  padding: 12px;
   background: #f8f9fa;
   border-radius: 6px;
-  min-height: 200px;
+  min-height: 150px;
 }
 
 .category-settings-adjustment {
   background: white;
-  padding: 20px;
+  padding: 12px;
   border-radius: 6px;
-  margin-top: 15px;
+  margin-top: 10px;
 }
 
 .category-settings-adjustment h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   color: #2c3e50;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .category-settings-adjustment .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .category-settings-adjustment .form-group label {
@@ -3125,42 +3271,43 @@ main {
 
 /* Wizard Step 3: Summary & Calculate Styles */
 .summary-section {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .summary-items {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 .summary-item {
   background: #f8f9fa;
-  padding: 15px;
+  padding: 10px 12px;
   border-radius: 6px;
   border-left: 4px solid #4a90e2;
 }
 
 .summary-item h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 6px 0;
   color: #2c3e50;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .summary-item p {
-  margin: 5px 0;
+  margin: 3px 0;
   color: #666;
+  font-size: 0.9rem;
 }
 
 .summary-detail {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #888;
-  margin-left: 10px;
+  margin-left: 8px;
 }
 
 .calculation-section {
-  margin-top: 20px;
-  padding: 20px;
+  margin-top: 12px;
+  padding: 12px;
   background: #f8f9fa;
   border-radius: 6px;
 }
@@ -3169,22 +3316,22 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
 }
 
 .calculating-indicator {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
-  padding: 20px;
+  gap: 10px;
+  padding: 12px;
 }
 
 .calculating-indicator .spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #4a90e2;
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #4a90e2;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

@@ -291,6 +291,7 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   const unlockedAchievements = new Set();
   
   let previousTimeElapsed = 0; // Track previous step's time for calculating time since last step
+  let stepOrder = 0; // Track actual step order (only increments when a step is created, not skipped)
   
   for (let i = 0; i < result.history.length; i++) {
     const item = result.history[i];
@@ -323,9 +324,12 @@ export async function calculateRoute(category, startingBuildings = {}, options =
         stepGame.purchaseUpgrade(upgrade);
       } else {
         console.warn('[Simulation] Could not find upgrade in menu:', item);
-        continue; // Skip this item if we can't find it
+        continue; // Skip this item if we can't find it (already purchased from imported save)
       }
     }
+    
+    // Increment step order only when we actually create a step (not skipped)
+    stepOrder++;
     
     // Capture rate and time after purchase (purchaseBuilding/purchaseUpgrade updates these)
     const rateAfter = stepGame.rate();
@@ -390,7 +394,7 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     // Store only non-calculable values to reduce storage size
     // Calculable values (cookiesPerSecond, timeElapsed, totalCookies) will be computed on display
     const step = {
-      order: i + 1,
+      order: stepOrder, // Use stepOrder instead of i + 1 to avoid gaps when items are skipped
       buildingName: item, // Building or upgrade name
       cookiesRequired: price,
       cpsIncrease: cpsIncrease,
@@ -399,7 +403,7 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     };
     
     // Store initial values for first step only (needed for calculation chain)
-    if (i === 0) {
+    if (stepOrder === 1) {
       step.initialCookiesPerSecond = rateAfter;
       step.initialTimeElapsed = timeAfter;
       step.initialTotalCookies = cookiesBefore;
@@ -415,7 +419,7 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     // Track achievement unlocks for route metadata
     if (stepAchievementUnlocks.length > 0) {
       achievementUnlocks.push({
-        stepIndex: i + 1,
+        stepIndex: stepOrder, // Use stepOrder instead of i + 1
         achievementIds: stepAchievementUnlocks
       });
     }
