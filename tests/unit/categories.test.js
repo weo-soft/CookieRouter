@@ -5,7 +5,6 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { fledgling, neverclick, hardcore, short } from '../../src/js/categories.js';
-import v2031 from '../../src/data/versions/v2031.js';
 import {
   getCategories,
   saveCategory,
@@ -15,75 +14,75 @@ import {
 
 describe('Categories', () => {
   describe('fledgling', () => {
-    it('should initialize with correct target cookies', () => {
-      const game = fledgling();
+    it('should initialize with correct target cookies', async () => {
+      const game = await fledgling();
       expect(game.targetCookies).toBe(1e6); // 1 million
     });
 
-    it('should have 10 cursors pre-purchased', () => {
-      const game = fledgling();
+    it('should have 10 cursors pre-purchased', async () => {
+      const game = await fledgling();
       expect(game.numBuildings['Cursor']).toBe(10);
     });
 
-    it('should have correct player settings', () => {
-      const game = fledgling();
+    it('should have correct player settings', async () => {
+      const game = await fledgling();
       expect(game.playerCps).toBe(8);
       expect(game.playerDelay).toBe(1);
     });
   });
 
   describe('neverclick', () => {
-    it('should initialize with correct target cookies', () => {
-      const game = neverclick();
+    it('should initialize with correct target cookies', async () => {
+      const game = await neverclick();
       expect(game.targetCookies).toBe(1e6); // 1 million
     });
 
-    it('should have 1 cursor and initial state', () => {
-      const game = neverclick();
+    it('should have 1 cursor and initial state', async () => {
+      const game = await neverclick();
       expect(game.numBuildings['Cursor']).toBe(1);
       expect(game.totalCookies).toBe(15);
       expect(game.timeElapsed).toBeCloseTo(1.2, 1);
     });
 
-    it('should have zero player CPS', () => {
-      const game = neverclick();
+    it('should have zero player CPS', async () => {
+      const game = await neverclick();
       expect(game.playerCps).toBe(0);
       expect(game.playerDelay).toBe(0);
     });
   });
 
   describe('hardcore', () => {
-    it('should initialize with correct target cookies', () => {
-      const game = hardcore();
+    it('should initialize with correct target cookies', async () => {
+      const game = await hardcore();
       expect(game.targetCookies).toBe(1e9); // 1 billion
     });
 
-    it('should have hardcore mode enabled', () => {
-      const game = hardcore();
+    it('should have hardcore mode enabled', async () => {
+      const game = await hardcore();
       expect(game.hardcoreMode).toBe(true);
     });
 
-    it('should have correct player settings', () => {
-      const game = hardcore();
+    it('should have correct player settings', async () => {
+      const game = await hardcore();
       expect(game.playerCps).toBe(8);
       expect(game.playerDelay).toBe(1);
     });
   });
 
   describe('short', () => {
-    it('should initialize with small target for testing', () => {
-      const game = short();
+    it('should initialize with small target for testing', async () => {
+      const game = await short();
       expect(game.targetCookies).toBe(1000);
     });
 
-    it('should have correct player settings', () => {
-      const game = short();
+    it('should have correct player settings', async () => {
+      const game = await short();
       expect(game.playerCps).toBe(8);
       expect(game.playerDelay).toBe(1);
     });
 
-    it('should have no pre-purchased buildings', () => {
-      const game = short();
+    it('should have no pre-purchased buildings', async () => {
+      const game = await short();
       expect(game.numBuildings['Cursor']).toBe(0);
     });
   });
@@ -91,9 +90,9 @@ describe('Categories', () => {
   describe('category routing integration', () => {
     it('should route short category to completion', async () => {
       const { Router } = await import('../../src/js/router.js');
-      const game = short();
+      const game = await short();
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       // Allow small tolerance for rounding (within 1% of target)
       expect(result.totalCookies).toBeGreaterThanOrEqual(game.targetCookies * 0.99);
@@ -102,9 +101,9 @@ describe('Categories', () => {
 
     it('should route fledgling category to completion', async () => {
       const { Router } = await import('../../src/js/router.js');
-      const game = fledgling();
+      const game = await fledgling();
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       // Allow small tolerance for rounding (within 1% of target)
       expect(result.totalCookies).toBeGreaterThanOrEqual(game.targetCookies * 0.99);

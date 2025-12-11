@@ -419,6 +419,244 @@ export function updateLastAccessed(savedRouteId) {
 }
 
 /**
+ * Updates a saved route by recalculating it with imported save game data
+ * @param {string} savedRouteId - ID of the saved route to update
+ * @param {Object} importedSaveGame - Imported save game data to use for recalculation
+ * @param {Object} options - Update options
+ *   - onProgress: function (optional) - Progress callback during calculation
+ *   - preserveProgress: boolean (optional) - Whether to preserve progress (default: true)
+ * @returns {Promise<Object>} RouteUpdateResult object with success status and updated route
+ */
+export async function updateSavedRoute(savedRouteId, importedSaveGame, options = {}) {
+  const {
+    onProgress = null,
+    preserveProgress = true
+  } = options;
+
+  // Import required modules (dynamic imports to avoid circular dependencies)
+  const { validateRouteUpdate, preserveRouteProgress, createRouteUpdateState, completeRouteUpdate, setRouteUpdateError, clearRouteUpdateState, updateRouteUpdateProgress } = await import('./utils/route-update.js');
+  const { calculateRoute } = await import('./simulation.js');
+
+  // Create update state
+  createRouteUpdateState(savedRouteId);
+
+  try {
+    // Get saved route
+    const savedRoute = getSavedRouteById(savedRouteId);
+    if (!savedRoute) {
+      const errorMessage = `Saved route with ID ${savedRouteId} not found`;
+      setRouteUpdateError(savedRouteId, errorMessage, 'ROUTE_NOT_FOUND');
+      return {
+        success: false,
+        error: {
+          message: errorMessage,
+          code: 'ROUTE_NOT_FOUND'
+        }
+      };
+    }
+
+    // Validate update
+    const validation = validateRouteUpdate(savedRoute, importedSaveGame);
+    if (!validation.isValid) {
+      const errorMessage = validation.errors.join('; ');
+      setRouteUpdateError(savedRouteId, errorMessage, 'VALIDATION_ERROR');
+      return {
+        success: false,
+        error: {
+          message: errorMessage,
+          code: 'VALIDATION_ERROR'
+        }
+      };
+    }
+
+    // Get category for recalculation
+    let category = getCategoryById(savedRoute.categoryId);
+    if (!category) {
+      // Try to create category from saved route data (for predefined categories)
+      const categoryName = savedRoute.categoryName.toLowerCase();
+      const predefinedCategoryMap = {
+        'short (test)': 'short',
+        'fledgling': 'fledgling',
+        'neverclick': 'neverclick',
+        'hardcore': 'hardcore',
+        'forty': 'forty',
+        'forty holiday': 'fortyHoliday',
+        'longhaul': 'longhaul',
+        'nevercore': 'nevercore'
+      };
+      
+      const functionName = predefinedCategoryMap[categoryName];
+      if (!functionName) {
+        const errorMessage = `Category ${savedRoute.categoryId} not found`;
+        setRouteUpdateError(savedRouteId, errorMessage, 'CATEGORY_NOT_FOUND');
+        return {
+          success: false,
+          error: {
+            message: errorMessage,
+            code: 'CATEGORY_NOT_FOUND'
+          }
+        };
+      }
+
+      // Create category object for predefined categories
+      category = {
+        id: savedRoute.categoryId,
+        name: savedRoute.categoryName,
+        isPredefined: true
+      };
+    }
+
+    // Extract starting buildings from imported save game
+    let startingBuildings = {};
+    if (importedSaveGame.buildings && Array.isArray(importedSaveGame.buildings)) {
+      for (const building of importedSaveGame.buildings) {
+        if (building.name && building.amountOwned !== undefined) {
+          startingBuildings[building.name] = building.amountOwned;
+        }
+      }
+    } else if (importedSaveGame.buildingCounts && typeof importedSaveGame.buildingCounts === 'object') {
+      startingBuildings = { ...importedSaveGame.buildingCounts };
+    }
+
+    // Extract upgrades from imported save game
+    const manualUpgrades = importedSaveGame.upgrades || [];
+
+    // Determine version to use (prefer imported version if compatible, otherwise use route version)
+    const versionId = validation.versionCompatible && importedSaveGame.version 
+      ? importedSaveGame.version 
+      : savedRoute.versionId;
+
+    // Recalculate route using calculateRoute
+    // Note: calculateRoute uses getImportedSaveGame() from memory, but we're passing
+    // startingBuildings and manualUpgrades directly, so it should work
+    const routeOptions = {
+      algorithm: savedRoute.routeData.algorithm || 'GPL',
+      lookahead: savedRoute.routeData.lookahead || 1,
+      onProgress: (progress) => {
+        if (onProgress) {
+          onProgress(progress);
+        }
+        // Update update state progress
+        updateRouteUpdateProgress(savedRouteId, {
+          moves: progress.moves || 0,
+          currentBuilding: progress.currentBuilding || ''
+        });
+      },
+      manualUpgrades: manualUpgrades
+    };
+
+    // Calculate new route
+    const newRoute = await calculateRoute(category, startingBuildings, routeOptions, versionId);
+
+    // Preserve progress if requested
+    let preservedProgress = [];
+    if (preserveProgress) {
+      const oldProgress = getProgress(savedRouteId);
+      const oldCompletedBuildings = oldProgress ? (oldProgress.completedBuildings || []) : [];
+      
+      // Map progress from old route to new route
+      preservedProgress = preserveRouteProgress(
+        { buildings: savedRoute.routeData.buildings },
+        { buildings: newRoute.buildings },
+        oldCompletedBuildings
+      );
+
+      // Progress will be saved later in the try block after route is saved
+    }
+
+    // Update saved route with new calculation results
+    // Preserve identity fields (id, name, categoryId, categoryName, versionId, savedAt)
+    const updatedRoute = {
+      ...savedRoute,
+      routeData: {
+        buildings: newRoute.buildings,
+        algorithm: savedRoute.routeData.algorithm || 'GPL',
+        lookahead: savedRoute.routeData.lookahead || 1,
+        completionTime: newRoute.completionTime || 0,
+        startingBuildings: startingBuildings
+      },
+      lastAccessedAt: Date.now(),
+      lastUpdatedAt: Date.now()
+    };
+
+    // Save updated route with error handling
+    try {
+      saveSavedRoute(updatedRoute);
+    } catch (saveError) {
+      // Handle localStorage quota exceeded
+      if (saveError.name === 'QuotaExceededError' || (saveError.message && saveError.message.includes('quota exceeded'))) {
+        const errorMessage = 'localStorage quota exceeded. Please delete old saved routes before updating.';
+        setRouteUpdateError(savedRouteId, errorMessage, 'STORAGE_QUOTA_EXCEEDED');
+        return {
+          success: false,
+          error: {
+            message: errorMessage,
+            code: 'STORAGE_QUOTA_EXCEEDED'
+          }
+        };
+      }
+      // Re-throw other save errors
+      throw saveError;
+    }
+
+    // Update progress with error handling
+    if (preserveProgress && oldProgress) {
+      try {
+        oldProgress.completedBuildings = preservedProgress;
+        oldProgress.lastUpdated = Date.now();
+        saveProgress(oldProgress);
+      } catch (progressError) {
+        // Log warning but don't fail update if progress save fails
+        console.warn('Failed to save preserved progress:', progressError);
+        // Update still succeeds, progress just wasn't saved
+      }
+    }
+
+    // Mark update as complete
+    completeRouteUpdate(savedRouteId);
+
+    return {
+      success: true,
+      updatedRoute: updatedRoute,
+      preservedProgress: preservedProgress
+    };
+
+  } catch (error) {
+    // Preserve original route unchanged on error
+    let errorMessage = error.message || 'Unknown error during route update';
+    let errorCode = error.code || 'CALCULATION_ERROR';
+
+    // Handle specific error types
+    if (error.name === 'QuotaExceededError' || (errorMessage && errorMessage.includes('quota exceeded'))) {
+      errorMessage = 'localStorage quota exceeded. Please delete old saved routes before updating.';
+      errorCode = 'STORAGE_QUOTA_EXCEEDED';
+    } else if (error.name === 'SyntaxError' || (errorMessage && errorMessage.includes('JSON'))) {
+      errorMessage = 'Corrupted route data detected. Please try reloading the route.';
+      errorCode = 'DATA_CORRUPTION';
+    } else if (errorMessage.includes('not found')) {
+      errorCode = 'NOT_FOUND';
+    } else if (errorMessage.includes('validation')) {
+      errorCode = 'VALIDATION_ERROR';
+    }
+    
+    setRouteUpdateError(savedRouteId, errorMessage, errorCode);
+    
+    return {
+      success: false,
+      error: {
+        message: errorMessage,
+        code: errorCode
+      }
+    };
+  } finally {
+    // Clear update state after a delay to allow UI to read it
+    setTimeout(() => {
+      clearRouteUpdateState(savedRouteId);
+    }, 1000);
+  }
+}
+
+/**
  * Save imported save game data to localStorage (temporary storage, not persisted across sessions)
  * @param {Object} importedSaveGame - ImportedSaveGame object to save
  * @throws {Error} If localStorage quota exceeded

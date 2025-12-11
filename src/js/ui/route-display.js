@@ -3,10 +3,12 @@
  * Displays calculated route with building purchase order
  */
 
-import { getProgress, saveProgress, updateProgress, clearProgress } from '../storage.js';
+import { getProgress, saveProgress, updateProgress, clearProgress, updateSavedRoute, getSavedRouteById } from '../storage.js';
+import { getImportedSaveGame } from '../save-game-importer.js';
 import { getAchievementById } from '../utils/achievements.js';
 import { formatNumber } from '../utils/format.js';
 import { exportRoute, detectRouteType } from './route-export.js';
+import { getRouteUpdateState } from '../utils/route-update.js';
 
 export class RouteDisplay {
   constructor(containerId, onSaveRoute = null) {
@@ -18,6 +20,8 @@ export class RouteDisplay {
     this.onSaveRoute = onSaveRoute; // Callback when save route is clicked
     this.tooltipElement = null; // Shared tooltip element
     this.buildingOrder = null; // Building order from version data
+    this.currentSavedRoute = null; // Store full saved route object when displaying saved route
+    this.isUpdating = false; // Track if route update is in progress
   }
 
   /**
@@ -130,6 +134,8 @@ export class RouteDisplay {
     // For saved routes, use routeData and savedRouteId
     let versionId = null;
     if (isSavedRoute) {
+      // Store full saved route object for update functionality
+      this.currentSavedRoute = route;
       // Convert saved route to display format
       this.currentRoute = {
         id: route.id, // Use saved route ID for progress tracking
@@ -141,6 +147,7 @@ export class RouteDisplay {
       };
       versionId = route.versionId;
     } else {
+      this.currentSavedRoute = null;
       versionId = route.versionId || this.currentVersionId;
     }
 
@@ -183,6 +190,9 @@ export class RouteDisplay {
     const totalCount = buildings.length;
     const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
+    // Check if imported save game is available for update
+    const hasImportedSaveGame = getImportedSaveGame() !== null;
+
     // Get route summary HTML (async)
     const routeSummaryHtml = await this.renderRouteSummary();
 
@@ -193,6 +203,8 @@ export class RouteDisplay {
           <div class="route-header-actions">
             ${completedCount > 0 ? `<button id="reset-progress-btn" class="btn-secondary" aria-label="Reset all progress">Reset</button>` : ''}
             ${this.onSaveRoute && !this.isSavedRoute ? `<button id="save-route-btn" class="btn-primary" aria-label="Save this route">Save Route</button>` : ''}
+            ${this.isSavedRoute && hasImportedSaveGame && !this.isUpdating ? `<button id="update-route-btn" class="btn-primary" aria-label="Update route with imported save game data">Update Route</button>` : ''}
+            ${this.isUpdating ? `<button id="cancel-update-btn" class="btn-secondary" aria-label="Cancel route update">Cancel</button>` : ''}
             <button id="export-route-btn" class="btn-secondary" aria-label="Export this route">Export</button>
           </div>
         </div>
@@ -385,6 +397,22 @@ export class RouteDisplay {
         if (this.onSaveRoute) {
           this.onSaveRoute(this.currentRoute, this.currentCategory, this.currentVersionId);
         }
+      });
+    }
+
+    // Attach update route button listener
+    const updateBtn = this.container.querySelector('#update-route-btn');
+    if (updateBtn && this.isSavedRoute && this.currentSavedRoute) {
+      updateBtn.addEventListener('click', () => {
+        this.handleUpdateRoute();
+      });
+    }
+
+    // Attach cancel update button listener
+    const cancelUpdateBtn = this.container.querySelector('#cancel-update-btn');
+    if (cancelUpdateBtn) {
+      cancelUpdateBtn.addEventListener('click', () => {
+        this.handleCancelUpdate();
       });
     }
 
@@ -611,14 +639,16 @@ export class RouteDisplay {
   /**
    * Show loading state
    * @param {number} steps - Optional number of steps calculated so far
+   * @param {string} message - Optional custom loading message
    */
-  showLoading(steps = 0) {
+  showLoading(steps = 0, message = null) {
     if (!this.container) return;
     const stepsText = steps > 0 ? ` (${steps} steps calculated)` : '';
+    const loadingMessage = message || `Calculating optimal route...${stepsText}`;
     this.container.innerHTML = `
       <div class="loading-state">
         <div class="spinner"></div>
-        <p>Calculating optimal route...${stepsText}</p>
+        <p>${loadingMessage}</p>
       </div>
     `;
   }
@@ -669,6 +699,151 @@ export class RouteDisplay {
         <button class="retry-button" onclick="location.reload()">Retry</button>
       </div>
     `;
+  }
+
+  /**
+   * Show success message
+   * @param {string} message - Success message to display
+   */
+  showSuccess(message) {
+    if (!this.container) return;
+    const successElement = document.createElement('div');
+    successElement.className = 'success-message';
+    successElement.textContent = message;
+    successElement.style.cssText = 'background-color: #4caf50; color: white; padding: 12px; border-radius: 4px; margin: 10px 0;';
+    
+    // Insert at the top of the container
+    const firstChild = this.container.firstChild;
+    if (firstChild) {
+      this.container.insertBefore(successElement, firstChild);
+    } else {
+      this.container.appendChild(successElement);
+    }
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      if (successElement.parentNode) {
+        successElement.remove();
+      }
+    }, 3000);
+  }
+
+  /**
+   * Handle route update button click
+   */
+  async handleUpdateRoute() {
+    if (!this.isSavedRoute || !this.currentSavedRoute) {
+      return;
+    }
+
+    // Check if update is already in progress
+    const updateState = getRouteUpdateState(this.currentSavedRoute.id);
+    if (updateState && updateState.isUpdating) {
+      return; // Already updating
+    }
+
+    // Get imported save game
+    const importedSaveGame = getImportedSaveGame();
+    if (!importedSaveGame) {
+      this.showError('No save game imported. Please import a save game first.');
+      return;
+    }
+
+    // Set updating flag
+    this.isUpdating = true;
+    await this.render(); // Re-render to show cancel button and hide update button
+
+    // Show loading state with update message
+    this.showLoading(0, 'Updating route with imported save game data...');
+
+    try {
+      // Update route
+      const result = await updateSavedRoute(this.currentSavedRoute.id, importedSaveGame, {
+        onProgress: (progress) => {
+          this.updateLoadingProgress(progress.moves || 0);
+        },
+        preserveProgress: true
+      });
+
+      if (result.success) {
+        // Reload the updated route
+        const updatedRoute = getSavedRouteById(this.currentSavedRoute.id);
+        if (updatedRoute) {
+          await this.displayRoute(updatedRoute, true);
+          const preservedCount = result.preservedProgress?.length || 0;
+          const successMessage = preservedCount > 0 
+            ? `Route updated successfully! Preserved ${preservedCount} completed step${preservedCount !== 1 ? 's' : ''}.`
+            : 'Route updated successfully!';
+          this.showSuccess(successMessage);
+        } else {
+          this.showError('Route updated but could not be reloaded. Please refresh the page.');
+        }
+      } else {
+        // Show comprehensive error message based on error code
+        const errorCode = result.error?.code || 'UNKNOWN_ERROR';
+        let errorMessage = result.error?.message || 'Unknown error occurred during route update';
+        
+        // Provide user-friendly error messages
+        switch (errorCode) {
+          case 'VALIDATION_ERROR':
+            errorMessage = `Validation failed: ${errorMessage}. Please check your imported save game data.`;
+            break;
+          case 'VERSION_MISMATCH':
+            errorMessage = `Version mismatch: ${errorMessage}. The imported save game version may not be compatible with this route.`;
+            break;
+          case 'STORAGE_QUOTA_EXCEEDED':
+            errorMessage = 'Storage quota exceeded. Please delete some old saved routes before updating.';
+            break;
+          case 'DATA_CORRUPTION':
+            errorMessage = 'Corrupted route data detected. Please try reloading the route.';
+            break;
+          case 'CATEGORY_NOT_FOUND':
+            errorMessage = `Category not found: ${errorMessage}. The route's category may have been deleted.`;
+            break;
+          case 'ROUTE_NOT_FOUND':
+            errorMessage = 'Route not found. It may have been deleted.';
+            break;
+          case 'CALCULATION_ERROR':
+            errorMessage = `Calculation failed: ${errorMessage}. The route has been preserved unchanged.`;
+            break;
+          default:
+            errorMessage = `Failed to update route: ${errorMessage}`;
+        }
+        
+        this.showError(errorMessage);
+        // Reload original route to ensure it's still displayed
+        await this.displayRoute(this.currentSavedRoute, true);
+      }
+    } catch (error) {
+      console.error('Error updating route:', error);
+      this.showError(`Failed to update route: ${error.message}`);
+      // Reload original route to ensure it's still displayed
+      await this.displayRoute(this.currentSavedRoute, true);
+    } finally {
+      this.isUpdating = false;
+      await this.render(); // Re-render to restore normal state
+    }
+  }
+
+  /**
+   * Handle cancel update button click
+   */
+  async handleCancelUpdate() {
+    if (!this.isSavedRoute || !this.currentSavedRoute) {
+      return;
+    }
+
+    // Import cancelRouteUpdate
+    const { cancelRouteUpdate } = await import('../utils/route-update.js');
+    
+    // Cancel the update
+    const cancelled = cancelRouteUpdate(this.currentSavedRoute.id);
+    
+    if (cancelled) {
+      this.isUpdating = false;
+      await this.render(); // Re-render to restore normal state
+      this.showSuccess('Route update cancelled.');
+    }
   }
 
   /**

@@ -480,8 +480,12 @@ export async function calculateRoute(category, startingBuildings = {}, options =
       const buildingName = item.substring('SUGAR_LUMP:'.length);
       // Sugar Lump upgrades don't cost cookies, so price is 0
       price = 0;
-      // The upgrade was already applied during route calculation, so we just need to track it
-      // buildingLevels should already be updated
+      // Actually apply the Sugar Lump upgrade to stepGame to keep state in sync
+      if (!stepGame.upgradeBuildingWithSugarLump(buildingName)) {
+        console.warn('[Simulation] Failed to apply Sugar Lump upgrade during replay:', buildingName);
+        // Skip this step if upgrade fails (shouldn't happen in normal flow)
+        continue;
+      }
     } else if (stepGame.buildingNames.includes(item)) {
       // It's a building
       price = stepGame.buildingPrice(item);

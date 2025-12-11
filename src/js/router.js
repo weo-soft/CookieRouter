@@ -154,6 +154,12 @@ export class Router {
         break;
       }
       
+      // Safety check: ensure child is a valid Game instance before reassigning
+      if (child === null || typeof child.rate !== 'function') {
+        console.error('[Router] GPLChild returned invalid child:', child);
+        break;
+      }
+      
       game = child;
       numMoves += 1;
       
@@ -198,6 +204,12 @@ export class Router {
    * (an easy heuristic giving locally optimal routing in simple cases)
    */
   GPLChild(game, generation = 1) {
+    // Safety check: ensure game is a valid Game instance
+    if (!game || typeof game.rate !== 'function') {
+      console.error('[Router] GPLChild called with invalid game object:', game);
+      return null;
+    }
+    
     const gameRate = game.rate(); // Calculate this once to save computer power
     let bestChild = null;
     let bestPl = null;
@@ -207,35 +219,53 @@ export class Router {
     let validChildCount = 0;
     let descendantCount = 0;
 
-    // First, check for Sugar Lump upgrades - these should be prioritized as they're instant and always beneficial
-    let sugarLumpUpgrade = null;
-    for (const child of game.children()) {
-      // Check if this is a Sugar Lump upgrade (history ends with SUGAR_LUMP:...)
-      const lastHistoryItem = child.history[child.history.length - 1];
-      if (lastHistoryItem && typeof lastHistoryItem === 'string' && lastHistoryItem.startsWith('SUGAR_LUMP:')) {
-        // Sugar Lump upgrade - instant, no time cost, always improves CpS
-        const rateChange = child.rate() - gameRate;
-        if (rateChange > 0) {
-          // Sugar Lump upgrades are instant (timeChange = 0), so payoffLoad = 0
-          // This makes them very attractive - prioritize them
-          sugarLumpUpgrade = child;
-          break; // Take the first available Sugar Lump upgrade (they're all instant and beneficial)
+    // Collect all children once to avoid generator issues
+    // Since children() is a generator that creates new instances, we need to evaluate them in a single pass
+    const allChildren = [];
+    const sugarLumpChildren = [];
+    
+    try {
+      for (const child of game.children()) {
+        // Safety check: ensure child is a valid Game instance
+        if (!child || typeof child.rate !== 'function') {
+          console.warn('[Router] Invalid child encountered, skipping');
+          continue;
         }
+        
+        const lastHistoryItem = child.history[child.history.length - 1];
+        if (lastHistoryItem && typeof lastHistoryItem === 'string' && lastHistoryItem.startsWith('SUGAR_LUMP:')) {
+          // Store Sugar Lump upgrades separately for evaluation
+          sugarLumpChildren.push(child);
+        } else {
+          // Store regular children
+          allChildren.push(child);
+        }
+      }
+    } catch (error) {
+      console.error('[Router] Error collecting children:', error);
+      return null;
+    }
+    
+    // Evaluate Sugar Lump upgrades - find the best one (highest rate change)
+    // Sugar Lump upgrades are instant (no time cost) and should be prioritized
+    let bestSugarLumpUpgrade = null;
+    let bestSugarLumpRateChange = 0;
+    for (const child of sugarLumpChildren) {
+      const rateChange = child.rate() - gameRate;
+      if (rateChange > bestSugarLumpRateChange) {
+        bestSugarLumpRateChange = rateChange;
+        bestSugarLumpUpgrade = child;
       }
     }
     
-    // If we found a Sugar Lump upgrade, return it immediately (they're always optimal when available)
-    if (sugarLumpUpgrade !== null) {
-      return sugarLumpUpgrade;
+    // If we found a Sugar Lump upgrade with positive rate change, return it immediately
+    // (they're always optimal when available since they're instant)
+    if (bestSugarLumpUpgrade !== null) {
+      return bestSugarLumpUpgrade;
     }
 
     // Otherwise, evaluate regular children (buildings, upgrades)
-    for (const child of game.children()) {
-      // Skip Sugar Lump upgrades - we already checked them above
-      const lastHistoryItem = child.history[child.history.length - 1];
-      if (lastHistoryItem && typeof lastHistoryItem === 'string' && lastHistoryItem.startsWith('SUGAR_LUMP:')) {
-        continue;
-      }
+    for (const child of allChildren) {
       
       childCount++;
       let bestDescendantPl = null;
