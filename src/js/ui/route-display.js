@@ -11,7 +11,7 @@ import { exportRoute, detectRouteType } from './route-export.js';
 import { getRouteUpdateState } from '../utils/route-update.js';
 
 export class RouteDisplay {
-  constructor(containerId, onSaveRoute = null) {
+  constructor(containerId, onSaveRoute = null, saveGameImportDialog = null) {
     this.container = document.getElementById(containerId);
     this.currentRoute = null;
     this.progress = null;
@@ -22,6 +22,8 @@ export class RouteDisplay {
     this.buildingOrder = null; // Building order from version data
     this.currentSavedRoute = null; // Store full saved route object when displaying saved route
     this.isUpdating = false; // Track if route update is in progress
+    this.saveGameImportDialog = saveGameImportDialog; // Reference to existing import dialog
+    this.pendingRouteUpdate = false; // Flag to track if we're waiting for import for route update
   }
 
   /**
@@ -190,9 +192,6 @@ export class RouteDisplay {
     const totalCount = buildings.length;
     const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-    // Check if imported save game is available for update
-    const hasImportedSaveGame = getImportedSaveGame() !== null;
-
     // Get route summary HTML (async)
     const routeSummaryHtml = await this.renderRouteSummary();
 
@@ -203,7 +202,7 @@ export class RouteDisplay {
           <div class="route-header-actions">
             ${completedCount > 0 ? `<button id="reset-progress-btn" class="btn-secondary" aria-label="Reset all progress">Reset</button>` : ''}
             ${this.onSaveRoute && !this.isSavedRoute ? `<button id="save-route-btn" class="btn-primary" aria-label="Save this route">Save Route</button>` : ''}
-            ${this.isSavedRoute && hasImportedSaveGame && !this.isUpdating ? `<button id="update-route-btn" class="btn-primary" aria-label="Update route with imported save game data">Update Route</button>` : ''}
+            ${this.isSavedRoute && !this.isUpdating ? `<button id="update-route-btn" class="btn-primary" aria-label="Update route with imported save game data">Update Route</button>` : ''}
             ${this.isUpdating ? `<button id="cancel-update-btn" class="btn-secondary" aria-label="Cancel route update">Cancel</button>` : ''}
             <button id="export-route-btn" class="btn-secondary" aria-label="Export this route">Export</button>
           </div>
@@ -729,9 +728,9 @@ export class RouteDisplay {
   }
 
   /**
-   * Handle route update button click
+   * Handle route update button click - opens import dialog
    */
-  async handleUpdateRoute() {
+  handleUpdateRoute() {
     if (!this.isSavedRoute || !this.currentSavedRoute) {
       return;
     }
@@ -742,10 +741,59 @@ export class RouteDisplay {
       return; // Already updating
     }
 
-    // Get imported save game
-    const importedSaveGame = getImportedSaveGame();
-    if (!importedSaveGame) {
-      this.showError('No save game imported. Please import a save game first.');
+    // Set flag to indicate we're waiting for import for route update
+    this.pendingRouteUpdate = true;
+
+    // Show the save game import dialog
+    if (this.saveGameImportDialog) {
+      // Store original callback to restore later
+      const originalOnImport = this.saveGameImportDialog.onImport;
+      
+      // Temporarily override the onImport callback to handle route update
+      // Skip the normal import flow (which shows route creation dialog) when updating a route
+      this.saveGameImportDialog.onImport = (importedSaveGame) => {
+        // Skip original callback (which shows route creation dialog) when updating route
+        // Only handle route update
+        if (this.pendingRouteUpdate) {
+          this.pendingRouteUpdate = false;
+          // Restore original callback
+          this.saveGameImportDialog.onImport = originalOnImport;
+          // Trigger route update directly without showing route creation dialog
+          this.handleRouteUpdateAfterImport(importedSaveGame);
+        } else {
+          // If not updating route, use normal flow
+          if (originalOnImport) {
+            originalOnImport(importedSaveGame);
+          }
+        }
+      };
+      
+      // Also handle dialog cancellation to clean up
+      const originalHide = this.saveGameImportDialog.hide.bind(this.saveGameImportDialog);
+      this.saveGameImportDialog.hide = () => {
+        // Clean up if dialog is closed without importing
+        if (this.pendingRouteUpdate) {
+          this.pendingRouteUpdate = false;
+          this.saveGameImportDialog.onImport = originalOnImport;
+        }
+        originalHide();
+        // Restore original hide method
+        this.saveGameImportDialog.hide = originalHide;
+      };
+      
+      this.saveGameImportDialog.show();
+    } else {
+      this.showError('Import dialog not available. Please refresh the page.');
+      this.pendingRouteUpdate = false;
+    }
+  }
+
+  /**
+   * Handle route update after save game import
+   * @param {Object} importedSaveGame - The imported save game data
+   */
+  async handleRouteUpdateAfterImport(importedSaveGame) {
+    if (!this.isSavedRoute || !this.currentSavedRoute) {
       return;
     }
 

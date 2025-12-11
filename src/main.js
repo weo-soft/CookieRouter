@@ -22,9 +22,9 @@ import { RouteImportDialog } from './js/ui/route-import-dialog.js';
 // CategorySelector, CustomCategoryForm, and StartingBuildingsSelector are only used in wizard, not in main.js
 let savedRoutesList = null; // Will be initialized conditionally based on page state
 const saveRouteDialog = new SaveRouteDialog('save-route-dialog-section', handleRouteSaved, handleSaveRouteCancel);
-const routeDisplay = new RouteDisplay('route-section', handleSaveRouteClick);
-const routeChainDisplay = new RouteChainDisplay('route-section', handleSaveRouteClick);
 const saveGameImportDialog = new SaveGameImportDialog('save-game-import-dialog-section', handleSaveGameImported, handleSaveGameCleared);
+const routeDisplay = new RouteDisplay('route-section', handleSaveRouteClick, saveGameImportDialog);
+const routeChainDisplay = new RouteChainDisplay('route-section', handleSaveRouteClick);
 const saveGameDetailsView = new SaveGameDetailsView('save-game-details-section');
 const saveGameDetailsDialog = new SaveGameDetailsDialog('save-game-details-dialog-section', handleCreateRouteFromSaveGame, handleSaveGameDetailsDialogClose);
 const routeCreationWizard = new RouteCreationWizard('route-creation-wizard-section', handleWizardComplete, handleWizardCancel);
