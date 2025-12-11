@@ -32,6 +32,9 @@ export class RouteCreationWizard {
         categoryConfig: null,
         selectedRoutes: [] // For route chain mode
       },
+      step3Data: {
+        lookahead: 1 // Default lookahead value
+      },
       validationErrors: {
         step1: [],
         step2: []
@@ -607,11 +610,14 @@ export class RouteCreationWizard {
         purchasedUpgrades = [...this.state.step1Data.manualUpgrades];
       }
 
+      // Get lookahead from wizard state (default to 1)
+      const lookahead = this.state.step3Data?.lookahead || 1;
+      
       // Calculate route
-      console.log('[Wizard] Calling calculateRoute with:', { category: config.category.name, versionId, startingBuildings });
+      console.log('[Wizard] Calling calculateRoute with:', { category: config.category.name, versionId, startingBuildings, lookahead });
       const route = await calculateRoute(config.category, startingBuildings, {
         algorithm: 'GPL',
-        lookahead: 1,
+        lookahead: lookahead,
         onProgress: onProgress,
         manualUpgrades: purchasedUpgrades
       }, versionId);
@@ -750,11 +756,14 @@ export class RouteCreationWizard {
         versionId: versionId
       };
 
+      // Get lookahead from wizard state (default to 1)
+      const chainLookahead = this.state.step3Data?.lookahead || 1;
+      
       // Calculate chain
-      console.log('[Wizard] Calling calculateRouteChain with:', { routes: chainConfig.routes.length, versionId, startingBuildings });
+      console.log('[Wizard] Calling calculateRouteChain with:', { routes: chainConfig.routes.length, versionId, startingBuildings, lookahead: chainLookahead });
       const result = await calculateRouteChain(chainConfig, startingBuildings, purchasedUpgrades, {
         algorithm: 'GPL',
-        lookahead: 1,
+        lookahead: chainLookahead,
         onProgress: onProgress
       });
       console.log('[Wizard] Chain calculation returned:', result);

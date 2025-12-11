@@ -1114,7 +1114,7 @@
         "Factory": {
           "type": "synergy",
           "params": [
-            0.0033333333333333333,
+            0.003333333333333333,
             "Grandma"
           ],
           "priority": 2
@@ -1154,7 +1154,7 @@
         "Grandma": 1,
         "Alchemy lab": 15
       },
-      "price": 255000000000,
+      "price": 3750000000000,
       "effects": {
         "Grandma": {
           "type": "multiplier",
@@ -1180,7 +1180,7 @@
         "Grandma": 1,
         "Portal": 15
       },
-      "price": 255000000000,
+      "price": 50000000000000,
       "effects": {
         "Grandma": {
           "type": "multiplier",
@@ -3902,7 +3902,7 @@
       "requirements": {
         "Prism": 350
       },
-      "price": 1.0499999999999999e+36,
+      "price": 1.05e+33,
       "effects": {
         "Prism": {
           "type": "multiplier",
@@ -3919,7 +3919,7 @@
       "requirements": {
         "Chancemaker": 350
       },
-      "price": 1.3e+37,
+      "price": 1.3e+34,
       "effects": {
         "Chancemaker": {
           "type": "multiplier",
@@ -4032,7 +4032,7 @@
       "requirements": {
         "Factory": 400
       },
-      "price": 650000000000000000000000000,
+      "price": 6.5e+29,
       "effects": {
         "Factory": {
           "type": "multiplier",
@@ -4134,7 +4134,7 @@
       "requirements": {
         "Portal": 400
       },
-      "price": 4.999999999999999e+36,
+      "price": 5e+33,
       "effects": {
         "Portal": {
           "type": "multiplier",
@@ -4151,7 +4151,7 @@
       "requirements": {
         "Time machine": 400
       },
-      "price": 6.999999999999999e+37,
+      "price": 7e+34,
       "effects": {
         "Time machine": {
           "type": "multiplier",
@@ -4168,7 +4168,7 @@
       "requirements": {
         "Antimatter condenser": 400
       },
-      "price": 8.5e+38,
+      "price": 8.5e+35,
       "effects": {
         "Antimatter condenser": {
           "type": "multiplier",
@@ -4185,7 +4185,7 @@
       "requirements": {
         "Prism": 400
       },
-      "price": 1.05e+40,
+      "price": 1.0499999999999999e+34,
       "effects": {
         "Prism": {
           "type": "multiplier",
@@ -4202,7 +4202,7 @@
       "requirements": {
         "Chancemaker": 400
       },
-      "price": 1.3e+41,
+      "price": 1.2999999999999998e+35,
       "effects": {
         "Chancemaker": {
           "type": "multiplier",
@@ -4398,7 +4398,7 @@
       "requirements": {
         "Fractal engine": 350
       },
-      "price": 1.5499999999999999e+38,
+      "price": 1.55e+35,
       "effects": {
         "Fractal engine": {
           "type": "multiplier",
@@ -4415,7 +4415,7 @@
       "requirements": {
         "Fractal engine": 400
       },
-      "price": 1.5499999999999998e+42,
+      "price": 1.55e+33,
       "effects": {
         "Fractal engine": {
           "type": "multiplier",
@@ -4594,7 +4594,7 @@
       "requirements": {
         "Javascript console": 300
       },
-      "price": 3.5499999999999998e+37,
+      "price": 3.55e+34,
       "effects": {
         "Javascript console": {
           "type": "multiplier",
@@ -4611,7 +4611,7 @@
       "requirements": {
         "Javascript console": 350
       },
-      "price": 3.55e+40,
+      "price": 3.55e+34,
       "effects": {
         "Javascript console": {
           "type": "multiplier",
@@ -4628,7 +4628,7 @@
       "requirements": {
         "Javascript console": 400
       },
-      "price": 3.5499999999999996e+44,
+      "price": 3.55e+35,
       "effects": {
         "Javascript console": {
           "type": "multiplier",
@@ -4767,7 +4767,7 @@
       "requirements": {
         "Temple": 450
       },
-      "price": 9.999999999999999e+35,
+      "price": 1e+33,
       "effects": {
         "Temple": {
           "type": "multiplier",
@@ -4784,7 +4784,7 @@
       "requirements": {
         "Wizard tower": 450
       },
-      "price": 1.6499999999999998e+37,
+      "price": 1.65e+34,
       "effects": {
         "Wizard tower": {
           "type": "multiplier",
@@ -4801,7 +4801,7 @@
       "requirements": {
         "Shipment": 450
       },
-      "price": 2.5499999999999997e+38,
+      "price": 2.5499999999999997e+35,
       "effects": {
         "Shipment": {
           "type": "multiplier",
@@ -4818,7 +4818,7 @@
       "requirements": {
         "Alchemy lab": 450
       },
-      "price": 3.75e+39,
+      "price": 3.7499999999999997e+33,
       "effects": {
         "Alchemy lab": {
           "type": "multiplier",
@@ -4835,7 +4835,7 @@
       "requirements": {
         "Portal": 450
       },
-      "price": 5e+40,
+      "price": 5e+34,
       "effects": {
         "Portal": {
           "type": "multiplier",
@@ -4852,7 +4852,7 @@
       "requirements": {
         "Time machine": 450
       },
-      "price": 7.000000000000001e+41,
+      "price": 7e+35,
       "effects": {
         "Time machine": {
           "type": "multiplier",
@@ -4869,7 +4869,7 @@
       "requirements": {
         "Antimatter condenser": 450
       },
-      "price": 8.499999999999999e+42,
+      "price": 8.5e+33,
       "effects": {
         "Antimatter condenser": {
           "type": "multiplier",
@@ -4886,7 +4886,7 @@
       "requirements": {
         "Prism": 450
       },
-      "price": 1.05e+44,
+      "price": 1.05e+35,
       "effects": {
         "Prism": {
           "type": "multiplier",
@@ -4903,7 +4903,7 @@
       "requirements": {
         "Chancemaker": 450
       },
-      "price": 1.2999999999999999e+45,
+      "price": 1.3e+33,
       "effects": {
         "Chancemaker": {
           "type": "multiplier",
@@ -4920,7 +4920,7 @@
       "requirements": {
         "Fractal engine": 450
       },
-      "price": 1.4999999999999999e+46,
+      "price": 1.4999999999999999e+34,
       "effects": {
         "Fractal engine": {
           "type": "multiplier",
@@ -4937,7 +4937,7 @@
       "requirements": {
         "Javascript console": 450
       },
-      "price": 3.55e+48,
+      "price": 3.55e+33,
       "effects": {
         "Javascript console": {
           "type": "multiplier",
@@ -5099,7 +5099,7 @@
       "requirements": {
         "Idleverse": 250
       },
-      "price": 6e+36,
+      "price": 6e+33,
       "effects": {
         "Idleverse": {
           "type": "multiplier",
@@ -5116,7 +5116,7 @@
       "requirements": {
         "Idleverse": 300
       },
-      "price": 6e+39,
+      "price": 6e+33,
       "effects": {
         "Idleverse": {
           "type": "multiplier",
@@ -5133,7 +5133,7 @@
       "requirements": {
         "Idleverse": 350
       },
-      "price": 5.999999999999999e+42,
+      "price": 6e+33,
       "effects": {
         "Idleverse": {
           "type": "multiplier",
@@ -5150,7 +5150,7 @@
       "requirements": {
         "Idleverse": 400
       },
-      "price": 5.999999999999999e+46,
+      "price": 5.999999999999999e+34,
       "effects": {
         "Idleverse": {
           "type": "multiplier",
@@ -5167,7 +5167,7 @@
       "requirements": {
         "Idleverse": 450
       },
-      "price": 6.0000000000000005e+50,
+      "price": 6e+35,
       "effects": {
         "Idleverse": {
           "type": "multiplier",
@@ -5218,7 +5218,7 @@
       "requirements": {
         "Mine": 500
       },
-      "price": 6e+36,
+      "price": 6e+33,
       "effects": {
         "Mine": {
           "type": "multiplier",
@@ -5235,7 +5235,7 @@
       "requirements": {
         "Factory": 500
       },
-      "price": 6.5e+37,
+      "price": 6.499999999999999e+34,
       "effects": {
         "Factory": {
           "type": "multiplier",
@@ -5252,7 +5252,7 @@
       "requirements": {
         "Bank": 500
       },
-      "price": 6.999999999999999e+38,
+      "price": 7e+35,
       "effects": {
         "Bank": {
           "type": "multiplier",
@@ -5269,7 +5269,7 @@
       "requirements": {
         "Temple": 500
       },
-      "price": 1.0000000000000002e+40,
+      "price": 1e+34,
       "effects": {
         "Temple": {
           "type": "multiplier",
@@ -5286,7 +5286,7 @@
       "requirements": {
         "Wizard tower": 500
       },
-      "price": 1.6500000000000002e+41,
+      "price": 1.6499999999999999e+35,
       "effects": {
         "Wizard tower": {
           "type": "multiplier",
@@ -5303,7 +5303,7 @@
       "requirements": {
         "Shipment": 500
       },
-      "price": 2.5499999999999997e+42,
+      "price": 2.5499999999999997e+33,
       "effects": {
         "Shipment": {
           "type": "multiplier",
@@ -5320,7 +5320,7 @@
       "requirements": {
         "Alchemy lab": 500
       },
-      "price": 3.7499999999999993e+43,
+      "price": 3.75e+34,
       "effects": {
         "Alchemy lab": {
           "type": "multiplier",
@@ -5337,7 +5337,7 @@
       "requirements": {
         "Portal": 500
       },
-      "price": 5e+44,
+      "price": 4.9999999999999995e+35,
       "effects": {
         "Portal": {
           "type": "multiplier",
@@ -5354,7 +5354,7 @@
       "requirements": {
         "Time machine": 500
       },
-      "price": 6.999999999999999e+45,
+      "price": 6.999999999999999e+33,
       "effects": {
         "Time machine": {
           "type": "multiplier",
@@ -5371,7 +5371,7 @@
       "requirements": {
         "Antimatter condenser": 500
       },
-      "price": 8.5e+46,
+      "price": 8.5e+34,
       "effects": {
         "Antimatter condenser": {
           "type": "multiplier",
@@ -5388,7 +5388,7 @@
       "requirements": {
         "Prism": 500
       },
-      "price": 1.0500000000000001e+48,
+      "price": 1.05e+33,
       "effects": {
         "Prism": {
           "type": "multiplier",
@@ -5405,7 +5405,7 @@
       "requirements": {
         "Prism": 500
       },
-      "price": 1.0500000000000001e+48,
+      "price": 1.05e+33,
       "effects": {
         "Prism": {
           "type": "multiplier",
@@ -5422,7 +5422,7 @@
       "requirements": {
         "Chancemaker": 500
       },
-      "price": 1.3e+49,
+      "price": 1.3e+34,
       "effects": {
         "Chancemaker": {
           "type": "multiplier",
@@ -5439,7 +5439,7 @@
       "requirements": {
         "Fractal engine": 500
       },
-      "price": 1.55e+50,
+      "price": 1.55e+35,
       "effects": {
         "Fractal engine": {
           "type": "multiplier",
@@ -5456,7 +5456,7 @@
       "requirements": {
         "Javascript console": 500
       },
-      "price": 3.55e+52,
+      "price": 3.55e+34,
       "effects": {
         "Javascript console": {
           "type": "multiplier",
@@ -5473,7 +5473,7 @@
       "requirements": {
         "Idleverse": 500
       },
-      "price": 6.0000000000000005e+54,
+      "price": 6e+33,
       "effects": {
         "Idleverse": {
           "type": "multiplier",
@@ -5665,7 +5665,7 @@
       "requirements": {
         "Cortex baker": 250
       },
-      "price": 9.5e+38,
+      "price": 9.499999999999999e+35,
       "effects": {
         "Cortex baker": {
           "type": "multiplier",
@@ -5682,7 +5682,7 @@
       "requirements": {
         "Cortex baker": 300
       },
-      "price": 9.500000000000001e+41,
+      "price": 9.499999999999999e+35,
       "effects": {
         "Cortex baker": {
           "type": "multiplier",
@@ -5699,7 +5699,7 @@
       "requirements": {
         "Cortex baker": 350
       },
-      "price": 9.499999999999999e+44,
+      "price": 9.499999999999999e+35,
       "effects": {
         "Cortex baker": {
           "type": "multiplier",
@@ -5716,7 +5716,7 @@
       "requirements": {
         "Cortex baker": 400
       },
-      "price": 9.500000000000001e+48,
+      "price": 9.499999999999999e+33,
       "effects": {
         "Cortex baker": {
           "type": "multiplier",
@@ -5733,7 +5733,7 @@
       "requirements": {
         "Cortex baker": 450
       },
-      "price": 9.5e+52,
+      "price": 9.5e+34,
       "effects": {
         "Cortex baker": {
           "type": "multiplier",
@@ -5750,7 +5750,7 @@
       "requirements": {
         "Cortex baker": 500
       },
-      "price": 9.500000000000001e+56,
+      "price": 9.499999999999999e+35,
       "effects": {
         "Cortex baker": {
           "type": "multiplier",
@@ -5767,7 +5767,7 @@
       "requirements": {
         "Grandma": 550
       },
-      "price": 5e+38,
+      "price": 4.9999999999999995e+35,
       "effects": {
         "Grandma": {
           "type": "multiplier",
@@ -5784,7 +5784,7 @@
       "requirements": {
         "Farm": 550
       },
-      "price": 5.500000000000001e+39,
+      "price": 5.499999999999999e+33,
       "effects": {
         "Farm": {
           "type": "multiplier",
@@ -5801,7 +5801,7 @@
       "requirements": {
         "Mine": 550
       },
-      "price": 6e+40,
+      "price": 5.999999999999999e+34,
       "effects": {
         "Mine": {
           "type": "multiplier",
@@ -5818,7 +5818,7 @@
       "requirements": {
         "Factory": 550
       },
-      "price": 6.5000000000000005e+41,
+      "price": 6.4999999999999996e+35,
       "effects": {
         "Factory": {
           "type": "multiplier",
@@ -5835,7 +5835,7 @@
       "requirements": {
         "Bank": 550
       },
-      "price": 6.999999999999999e+42,
+      "price": 6.999999999999999e+33,
       "effects": {
         "Bank": {
           "type": "multiplier",
@@ -5852,7 +5852,7 @@
       "requirements": {
         "Temple": 550
       },
-      "price": 9.999999999999999e+43,
+      "price": 1e+35,
       "effects": {
         "Temple": {
           "type": "multiplier",
@@ -5869,7 +5869,7 @@
       "requirements": {
         "Wizard tower": 550
       },
-      "price": 1.6499999999999997e+45,
+      "price": 1.65e+33,
       "effects": {
         "Wizard tower": {
           "type": "multiplier",
@@ -5886,7 +5886,7 @@
       "requirements": {
         "Shipment": 550
       },
-      "price": 2.55e+46,
+      "price": 2.5499999999999997e+34,
       "effects": {
         "Shipment": {
           "type": "multiplier",
@@ -5903,7 +5903,7 @@
       "requirements": {
         "Alchemy lab": 550
       },
-      "price": 3.75e+47,
+      "price": 3.75e+35,
       "effects": {
         "Alchemy lab": {
           "type": "multiplier",
@@ -5920,7 +5920,7 @@
       "requirements": {
         "Portal": 550
       },
-      "price": 5.0000000000000004e+48,
+      "price": 5e+33,
       "effects": {
         "Portal": {
           "type": "multiplier",
@@ -5937,7 +5937,7 @@
       "requirements": {
         "Time machine": 550
       },
-      "price": 7.000000000000001e+49,
+      "price": 7e+34,
       "effects": {
         "Time machine": {
           "type": "multiplier",
@@ -5954,7 +5954,7 @@
       "requirements": {
         "Antimatter condenser": 550
       },
-      "price": 8.5e+50,
+      "price": 8.5e+35,
       "effects": {
         "Antimatter condenser": {
           "type": "multiplier",
@@ -5971,7 +5971,7 @@
       "requirements": {
         "Prism": 550
       },
-      "price": 1.05e+52,
+      "price": 1.0499999999999999e+34,
       "effects": {
         "Prism": {
           "type": "multiplier",
@@ -5988,7 +5988,7 @@
       "requirements": {
         "Chancemaker": 550
       },
-      "price": 1.3e+53,
+      "price": 1.2999999999999998e+35,
       "effects": {
         "Chancemaker": {
           "type": "multiplier",
@@ -6005,7 +6005,7 @@
       "requirements": {
         "Fractal engine": 550
       },
-      "price": 1.5500000000000003e+54,
+      "price": 1.55e+33,
       "effects": {
         "Fractal engine": {
           "type": "multiplier",
@@ -6022,7 +6022,7 @@
       "requirements": {
         "Javascript console": 550
       },
-      "price": 3.5500000000000004e+56,
+      "price": 3.55e+35,
       "effects": {
         "Javascript console": {
           "type": "multiplier",
@@ -6039,7 +6039,7 @@
       "requirements": {
         "Idleverse": 550
       },
-      "price": 6e+58,
+      "price": 5.999999999999999e+34,
       "effects": {
         "Idleverse": {
           "type": "multiplier",
@@ -6056,7 +6056,7 @@
       "requirements": {
         "Cortex baker": 550
       },
-      "price": 9.5e+60,
+      "price": 9.499999999999999e+33,
       "effects": {
         "Cortex baker": {
           "type": "multiplier",
@@ -6238,7 +6238,7 @@
       "requirements": {
         "You": 200
       },
-      "price": 2.6999999999999996e+38,
+      "price": 2.7e+35,
       "effects": {
         "You": {
           "type": "multiplier",
@@ -6255,7 +6255,7 @@
       "requirements": {
         "You": 250
       },
-      "price": 2.7000000000000004e+41,
+      "price": 2.7e+35,
       "effects": {
         "You": {
           "type": "multiplier",
@@ -6272,7 +6272,7 @@
       "requirements": {
         "You": 300
       },
-      "price": 2.6999999999999996e+44,
+      "price": 2.7e+35,
       "effects": {
         "You": {
           "type": "multiplier",
@@ -6289,7 +6289,7 @@
       "requirements": {
         "You": 350
       },
-      "price": 2.7e+47,
+      "price": 2.7e+35,
       "effects": {
         "You": {
           "type": "multiplier",
@@ -6306,7 +6306,7 @@
       "requirements": {
         "You": 400
       },
-      "price": 2.7000000000000002e+51,
+      "price": 2.7e+33,
       "effects": {
         "You": {
           "type": "multiplier",
@@ -6323,7 +6323,7 @@
       "requirements": {
         "You": 450
       },
-      "price": 2.7000000000000003e+55,
+      "price": 2.7e+34,
       "effects": {
         "You": {
           "type": "multiplier",
@@ -6340,7 +6340,7 @@
       "requirements": {
         "You": 500
       },
-      "price": 2.7e+59,
+      "price": 2.7e+35,
       "effects": {
         "You": {
           "type": "multiplier",
@@ -6374,7 +6374,7 @@
       "requirements": {
         "Grandma": 600
       },
-      "price": 4.9999999999999995e+42,
+      "price": 5e+33,
       "effects": {
         "Grandma": {
           "type": "multiplier",
@@ -6391,7 +6391,7 @@
       "requirements": {
         "Farm": 600
       },
-      "price": 5.499999999999999e+43,
+      "price": 5.5e+34,
       "effects": {
         "Farm": {
           "type": "multiplier",
@@ -6408,7 +6408,7 @@
       "requirements": {
         "Mine": 600
       },
-      "price": 5.999999999999999e+44,
+      "price": 6e+35,
       "effects": {
         "Mine": {
           "type": "multiplier",
@@ -6425,7 +6425,7 @@
       "requirements": {
         "Factory": 600
       },
-      "price": 6.499999999999999e+45,
+      "price": 6.5e+33,
       "effects": {
         "Factory": {
           "type": "multiplier",
@@ -6442,7 +6442,7 @@
       "requirements": {
         "Bank": 600
       },
-      "price": 7e+46,
+      "price": 7e+34,
       "effects": {
         "Bank": {
           "type": "multiplier",
@@ -6459,7 +6459,7 @@
       "requirements": {
         "Temple": 600
       },
-      "price": 1e+48,
+      "price": 1e+33,
       "effects": {
         "Temple": {
           "type": "multiplier",
@@ -6476,7 +6476,7 @@
       "requirements": {
         "Wizard tower": 600
       },
-      "price": 1.6500000000000002e+49,
+      "price": 1.65e+34,
       "effects": {
         "Wizard tower": {
           "type": "multiplier",
@@ -6493,7 +6493,7 @@
       "requirements": {
         "Shipment": 600
       },
-      "price": 2.5500000000000003e+50,
+      "price": 2.5499999999999997e+35,
       "effects": {
         "Shipment": {
           "type": "multiplier",
@@ -6510,7 +6510,7 @@
       "requirements": {
         "Alchemy lab": 600
       },
-      "price": 3.75e+51,
+      "price": 3.7499999999999997e+33,
       "effects": {
         "Alchemy lab": {
           "type": "multiplier",
@@ -6527,7 +6527,7 @@
       "requirements": {
         "Portal": 600
       },
-      "price": 5e+52,
+      "price": 5e+34,
       "effects": {
         "Portal": {
           "type": "multiplier",
@@ -6544,7 +6544,7 @@
       "requirements": {
         "Time machine": 600
       },
-      "price": 6.9999999999999995e+53,
+      "price": 7e+35,
       "effects": {
         "Time machine": {
           "type": "multiplier",
@@ -6561,7 +6561,7 @@
       "requirements": {
         "Antimatter condenser": 600
       },
-      "price": 8.500000000000001e+54,
+      "price": 8.5e+33,
       "effects": {
         "Antimatter condenser": {
           "type": "multiplier",
@@ -6578,7 +6578,7 @@
       "requirements": {
         "Prism": 600
       },
-      "price": 1.05e+56,
+      "price": 1.05e+35,
       "effects": {
         "Prism": {
           "type": "multiplier",
@@ -6595,7 +6595,7 @@
       "requirements": {
         "Chancemaker": 600
       },
-      "price": 1.3000000000000002e+57,
+      "price": 1.3e+33,
       "effects": {
         "Chancemaker": {
           "type": "multiplier",
@@ -6612,7 +6612,7 @@
       "requirements": {
         "Chancemaker": 600
       },
-      "price": 1.3000000000000002e+57,
+      "price": 1.3e+33,
       "effects": {
         "Chancemaker": {
           "type": "multiplier",
@@ -6629,7 +6629,7 @@
       "requirements": {
         "Fractal engine": 600
       },
-      "price": 1.55e+58,
+      "price": 1.55e+34,
       "effects": {
         "Fractal engine": {
           "type": "multiplier",
@@ -6646,7 +6646,7 @@
       "requirements": {
         "Javascript console": 600
       },
-      "price": 3.5499999999999996e+60,
+      "price": 3.55e+33,
       "effects": {
         "Javascript console": {
           "type": "multiplier",
@@ -6663,7 +6663,7 @@
       "requirements": {
         "Idleverse": 600
       },
-      "price": 6e+62,
+      "price": 6e+35,
       "effects": {
         "Idleverse": {
           "type": "multiplier",
@@ -6779,7 +6779,7 @@
         "Javascript console": 75,
         "You": 75
       },
-      "price": 1.08e+38,
+      "price": 1.08e+35,
       "effects": {
         "Javascript console": {
           "type": "synergy",

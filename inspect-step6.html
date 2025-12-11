@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Inspect Step 6</title>
+  <script type="module">
+    // This script can be run in the browser console after route calculation
+    // to inspect step 6 and see what alternatives were available
+    
+    window.inspectStep6 = function(route) {
+      if (!route || !route.buildings) {
+        console.error('No route data provided');
+        return;
+      }
+      
+      const step6 = route.buildings.find(s => s.order === 6);
+      if (!step6) {
+        console.log('Step 6 not found. Available steps:', route.buildings.slice(0, 10).map(s => ({
+          order: s.order,
+          building: s.buildingName,
+          timeHours: (s.timeSinceLastStep || 0) / 3600
+        })));
+        return;
+      }
+      
+      console.log('=== STEP 6 ANALYSIS ===');
+      console.log('Selected Building:', step6.buildingName);
+      console.log('Cookies Required:', step6.cookiesRequired);
+      console.log('Time Since Last Step:', (step6.timeSinceLastStep || 0) / 3600, 'hours');
+      console.log('CpS Increase:', step6.cpsIncrease);
+      
+      // Show context: previous and next steps
+      console.log('\n=== CONTEXT ===');
+      console.log('Previous steps:');
+      for (let i = Math.max(1, step6.order - 3); i < step6.order; i++) {
+        const step = route.buildings.find(s => s.order === i);
+        if (step) {
+          console.log(`  Step ${step.order}: ${step.buildingName} - ${(step.timeSinceLastStep || 0) / 3600}h wait, ${step.cpsIncrease} CpS increase`);
+        }
+      }
+      
+      console.log('\nNext steps:');
+      for (let i = step6.order + 1; i <= Math.min(step6.order + 5, route.buildings.length); i++) {
+        const step = route.buildings.find(s => s.order === i);
+        if (step) {
+          console.log(`  Step ${step.order}: ${step.buildingName} - ${(step.timeSinceLastStep || 0) / 3600}h wait, ${step.cpsIncrease} CpS increase`);
+        }
+      }
+      
+      // Analyze: What if we had bought a cheaper building at step 6?
+      console.log('\n=== ANALYSIS ===');
+      console.log('Step 6 has a very long wait time (6.72h).');
+      console.log('This suggests either:');
+      console.log('1. All other buildings had even worse payoff loads');
+      console.log('2. The algorithm is making locally optimal but not globally optimal choices');
+      console.log('3. There may be a bug in the evaluation logic');
+      console.log('\nTo verify, check the console logs for "[Router] Step 6 evaluation:" during calculation.');
+    };
+    
+    console.log('Step 6 inspector loaded. Use inspectStep6(route) in console after calculating a route.');
+  </script>
+</head>
+<body>
+  <h1>Step 6 Inspector</h1>
+  <p>Open browser console and use: <code>inspectStep6(route)</code></p>
+  <p>Or access the route from the route display component.</p>
+</body>
+</html>

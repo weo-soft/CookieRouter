@@ -211,6 +211,14 @@ export class Router {
     }
     
     const gameRate = game.rate(); // Calculate this once to save computer power
+    const currentStep = game.history.length + 1; // Next step number (1-indexed)
+    
+    // DEBUG: Log first few steps and step 6 specifically
+    const debugStep6 = currentStep === 6;
+    if (currentStep <= 10) {
+      console.log(`[Router] 🔍 Step ${currentStep} evaluation, history length:`, game.history.length, 'history:', game.history.slice(-3));
+    }
+    
     let bestChild = null;
     let bestPl = null;
     let bestPrice = null;
@@ -225,6 +233,10 @@ export class Router {
     const sugarLumpChildren = [];
     
     try {
+      let upgradeCount = 0;
+      let buildingCount = 0;
+      const availableUpgrades = [];
+      
       for (const child of game.children()) {
         // Safety check: ensure child is a valid Game instance
         if (!child || typeof child.rate !== 'function') {
@@ -239,6 +251,34 @@ export class Router {
         } else {
           // Store regular children
           allChildren.push(child);
+          
+          // Track upgrade vs building counts for debugging
+          if (lastHistoryItem && !game.buildingNames.includes(lastHistoryItem)) {
+            upgradeCount++;
+            if (lastHistoryItem.toLowerCase().includes('kitten')) {
+              availableUpgrades.push(lastHistoryItem);
+            }
+          } else {
+            buildingCount++;
+          }
+        }
+      }
+      
+      // DEBUG: Log available kitten upgrades (only if there's a mismatch and it's not just a price issue)
+      const menuUpgradeNames = Array.from(game.menu).map(u => u.name).filter(n => n.toLowerCase().includes('kitten'));
+      if (menuUpgradeNames.length > availableUpgrades.length) {
+        const unavailable = menuUpgradeNames.filter(n => !availableUpgrades.includes(n));
+        // Check if unavailable upgrades are just too expensive (expected behavior)
+        const unavailableUpgrades = Array.from(game.menu).filter(u => unavailable.includes(u.name));
+        const tooExpensive = unavailableUpgrades.filter(u => u.price > game.totalCookies);
+        const otherIssues = unavailable.filter(name => {
+          const upgrade = Array.from(game.menu).find(u => u.name === name);
+          return upgrade && upgrade.price <= game.totalCookies;
+        });
+        
+        // Only warn if there are issues other than price (requirements, etc.)
+        if (otherIssues.length > 0) {
+          console.warn('[Router] ⚠️ Some kitten upgrades in menu are not available as children (not price-related):', otherIssues);
         }
       }
     } catch (error) {
@@ -265,6 +305,13 @@ export class Router {
     }
 
     // Otherwise, evaluate regular children (buildings, upgrades)
+    // DEBUG: Track evaluation details for step 6 investigation
+    const debugInfo = debugStep6 ? [] : null;
+    
+    if (debugStep6) {
+      console.log('[Router] ⚠️⚠️⚠️ STEP 6 DETECTED - Starting evaluation, allChildren count:', allChildren.length);
+    }
+    
     for (const child of allChildren) {
       
       childCount++;
@@ -278,11 +325,29 @@ export class Router {
         // What changed from 'game' to this descendant?
         const timeChange = descendant.timeElapsed - game.timeElapsed;
         const rateChange = descendant.rate() - gameRate;
+        
         // Make sure the CpS actually went up
-        if (rateChange === 0) continue;
+        if (rateChange === 0) {
+          continue;
+        }
         // Payoff load calculation
         const price = gameRate * timeChange;
         const payoffLoad = price * (1 + gameRate / rateChange);
+        
+        // DEBUG: Log evaluation details for step 6
+        if (debugStep6 && debugInfo !== null) {
+          const buildingName = child.history.length > 0 ? child.history[child.history.length - 1] : 'unknown';
+          debugInfo.push({
+            building: buildingName,
+            timeChange: timeChange,
+            timeChangeHours: timeChange / 3600,
+            rateChange: rateChange,
+            price: price,
+            payoffLoad: payoffLoad,
+            currentRate: gameRate
+          });
+        }
+        
         // Record the best descendant of this 'child'
         if (bestDescendantPl === null || payoffLoad < bestDescendantPl) {
           bestDescendantPl = payoffLoad;
@@ -295,7 +360,7 @@ export class Router {
       
       // Prefer significantly cheaper purchases when payoff loads are similar
       // This helps avoid skipping over affordable purchases in favor of expensive ones
-      // If new purchase is 10x+ cheaper and payoff load is within 15% of best, prefer it
+      // Very aggressive preference for cheaper buildings to avoid long waits
       let shouldSelect = false;
       if (bestPl === null) {
         // First valid purchase found
@@ -307,8 +372,32 @@ export class Router {
         // Check if significantly cheaper with acceptable payoff load
         const priceRatio = bestPrice / bestDescendantPrice;
         const payoffRatio = bestDescendantPl / bestPl;
-        // Prefer if 10x+ cheaper and payoff load is within 15% of best
-        if (priceRatio >= 10 && payoffRatio <= 1.15) {
+        
+        // Very aggressive preference logic for cheaper buildings:
+        // Strongly favor cheaper buildings to avoid long wait times
+        // The key insight: Even if payoff load is worse, buying cheaper buildings first
+        // increases CpS sooner, making subsequent purchases faster overall
+        // 1. If 1.5x+ cheaper and payoff load within 50% of best, prefer it
+        // 2. If 2x+ cheaper and payoff load within 100% of best (2x), prefer it
+        // 3. If 3x+ cheaper, prefer it even if payoff load is up to 2.5x worse
+        // 4. If 5x+ cheaper, prefer it even if payoff load is up to 4x worse
+        // 5. If 10x+ cheaper, prefer it even if payoff load is up to 8x worse
+        // 6. If 20x+ cheaper, prefer it even if payoff load is up to 15x worse
+        // 7. If 50x+ cheaper, prefer it even if payoff load is up to 30x worse
+        // This very strongly biases toward cheaper buildings to avoid situations like step 6's 6.72h wait
+        if (priceRatio >= 50 && payoffRatio <= 30.0) {
+          shouldSelect = true;
+        } else if (priceRatio >= 20 && payoffRatio <= 15.0) {
+          shouldSelect = true;
+        } else if (priceRatio >= 10 && payoffRatio <= 8.0) {
+          shouldSelect = true;
+        } else if (priceRatio >= 5 && payoffRatio <= 4.0) {
+          shouldSelect = true;
+        } else if (priceRatio >= 3 && payoffRatio <= 2.5) {
+          shouldSelect = true;
+        } else if (priceRatio >= 2 && payoffRatio <= 2.0) {
+          shouldSelect = true;
+        } else if (priceRatio >= 1.5 && payoffRatio <= 1.5) {
           shouldSelect = true;
         }
       }
@@ -317,6 +406,46 @@ export class Router {
         bestChild = child;
         bestPl = bestDescendantPl;
         bestPrice = bestDescendantPrice;
+      }
+    }
+    
+    // DEBUG: Log step 6 evaluation results
+    if (debugStep6) {
+      const selectedBuilding = bestChild ? bestChild.history[bestChild.history.length - 1] : null;
+      console.log('[Router] ⚠️⚠️⚠️ STEP 6 EVALUATION COMPLETE ⚠️⚠️⚠️', {
+        currentStep: currentStep,
+        historyLength: game.history.length,
+        totalChildren: childCount,
+        validChildren: validChildCount,
+        selectedBuilding: selectedBuilding,
+        selectedPayoffLoad: bestPl,
+        selectedPrice: bestPrice,
+        selectedTimeHours: bestPrice ? (bestPrice / gameRate) / 3600 : null,
+        currentRate: gameRate,
+        debugInfoExists: debugInfo !== null,
+        debugInfoLength: debugInfo ? debugInfo.length : 'N/A'
+      });
+      
+      if (debugInfo && debugInfo.length > 0) {
+        const sorted = debugInfo.sort((a, b) => a.payoffLoad - b.payoffLoad);
+        console.log('[Router] ⚠️⚠️⚠️ STEP 6 - TOP 10 BY PAYOFF LOAD ⚠️⚠️⚠️:', sorted.slice(0, 10).map(opt => ({
+          building: opt.building,
+          payoffLoad: opt.payoffLoad,
+          timeHours: opt.timeChangeHours,
+          rateChange: opt.rateChange,
+          price: opt.price
+        })));
+        
+        const cheapest = debugInfo.sort((a, b) => a.timeChange - b.timeChange).slice(0, 10);
+        console.log('[Router] ⚠️⚠️⚠️ STEP 6 - TOP 10 CHEAPEST ⚠️⚠️⚠️:', cheapest.map(opt => ({
+          building: opt.building,
+          payoffLoad: opt.payoffLoad,
+          timeHours: opt.timeChangeHours,
+          rateChange: opt.rateChange,
+          price: opt.price
+        })));
+      } else {
+        console.log('[Router] ⚠️⚠️⚠️ STEP 6 - NO DEBUG INFO COLLECTED ⚠️⚠️⚠️');
       }
     }
     

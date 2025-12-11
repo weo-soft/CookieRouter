@@ -74,11 +74,13 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     version = await loadVersionById(effectiveVersionId);
     
     // Load raw version JSON data to check effect types (for kitten upgrades)
-    const versionModules = import.meta.glob('../../data/versions/v*.json', { eager: true });
-    const versionPath = `../../data/versions/${effectiveVersionId}.json`;
-    const versionDataModule = versionModules[versionPath];
-    if (versionDataModule) {
-      versionData = versionDataModule.default || versionDataModule;
+    // Use version-loader's pre-loaded modules
+    try {
+      const { loadVersionDataById } = await import('./utils/version-loader.js');
+      versionData = await loadVersionDataById(effectiveVersionId);
+    } catch (error) {
+      console.warn('[Simulation] Failed to load versionData:', error);
+      versionData = null;
     }
   } catch (error) {
     console.warn(`Failed to load version ${effectiveVersionId}, falling back to v2052`, error);
@@ -88,11 +90,12 @@ export async function calculateRoute(category, startingBuildings = {}, options =
       effectiveVersionId = 'v2052';
       
       // Load raw version JSON data for fallback version
-      const versionModules = import.meta.glob('../../data/versions/v*.json', { eager: true });
-      const versionPath = `../../data/versions/v2052.json`;
-      const versionDataModule = versionModules[versionPath];
-      if (versionDataModule) {
-        versionData = versionDataModule.default || versionDataModule;
+      try {
+        const { loadVersionDataById } = await import('./utils/version-loader.js');
+        versionData = await loadVersionDataById('v2052');
+      } catch (error) {
+        console.warn('[Simulation] Failed to load fallback versionData:', error);
+        versionData = null;
       }
     } catch (fallbackError) {
       throw new Error(`Failed to load version ${effectiveVersionId} and fallback v2052: ${fallbackError.message}`);
@@ -101,6 +104,9 @@ export async function calculateRoute(category, startingBuildings = {}, options =
 
   // Create game instance from category
   let game;
+  // Check if we have starting buildings - if so, skip initialPurchases from category
+  const hasStartingBuildings = Object.keys(effectiveStartingBuildings).length > 0;
+  
   if (category.isPredefined) {
     // Map category names to functions
     const categoryMap = {
@@ -118,8 +124,11 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     const functionName = categoryMap[categoryName];
     
     if (functionName && categoryFunctions[functionName]) {
-      game = await categoryFunctions[functionName](version, category.playerCps || 8, category.playerDelay || 1);
+      // Skip initialPurchases if we have starting buildings from imported save
+      // This prevents unnecessary purchases that would be overwritten anyway
+      game = await categoryFunctions[functionName](version, category.playerCps || 8, category.playerDelay || 1, hasStartingBuildings);
       // Set versionData after creation (category functions create Game internally)
+      // versionData is needed for kitten upgrade detection
       game.versionData = versionData;
     } else {
       // Fallback: create game manually
@@ -236,6 +245,9 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     }
   }
   const initialMilkAmount = initialAchievementCount * 0.04; // e.g., 57 achievements = 2.28 = 228%
+  
+  // Store initial achievement count in game instance for milk calculation
+  game.initialAchievementCount = initialAchievementCount;
 
   // Apply purchased upgrades from imported save and manual setup
   let purchasedUpgrades = [];
@@ -300,11 +312,31 @@ export async function calculateRoute(category, startingBuildings = {}, options =
         // Formula: boost = (milk_factor * milk_amount) * 100
         const boostPercent = (kittenMilkFactor * currentMilkAmount) * 100;
         
-        // Apply the dynamically calculated percentBoost effect to all targets
-        for (const buildingName in upgrade.effects) {
-          // Create a new percentBoost effect with the calculated value
-          const dynamicEffect = createPercentBoost(boostPercent);
-          game.effects[buildingName].push(dynamicEffect);
+        // Apply the dynamically calculated percentBoost effect
+        // Kitten upgrades that affect 'all' should apply to global effects array
+        const dynamicEffect = createPercentBoost(boostPercent);
+        
+        // Check what targets the upgrade affects (from the original upgrade definition)
+        const upgradeDef = versionData.upgrades.find(u => u.name === upgradeName);
+        if (upgradeDef && upgradeDef.effects) {
+          // Check if upgrade affects 'all'
+          if (upgradeDef.effects['all']) {
+            // Apply to global effects array - this affects all buildings at once
+            game.effects['all'].push(dynamicEffect);
+          } else if (upgradeDef.effects['mouse']) {
+            // Mouse effects go to mouse effects array
+            game.effects['mouse'].push(dynamicEffect);
+          } else {
+            // Apply to specific buildings (if any)
+            for (const target in upgradeDef.effects) {
+              if (game.effects[target]) {
+                game.effects[target].push(dynamicEffect);
+              }
+            }
+          }
+        } else {
+          // Fallback: if we can't determine targets, apply to 'all' (kitten upgrades are typically global)
+          game.effects['all'].push(dynamicEffect);
         }
       } else {
         // Regular upgrade - apply effects as-is

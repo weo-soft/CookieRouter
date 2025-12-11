@@ -80,7 +80,7 @@ function evaluateTargetCookies(value) {
  * Create a category function from a JSON configuration
  */
 function createCategoryFunction(config) {
-  return async function(version = null, playerCps = null, playerDelay = null) {
+  return async function(version = null, playerCps = null, playerDelay = null, skipInitialPurchases = false) {
     // Use provided version or load from config
     let gameVersion;
     if (version) {
@@ -100,6 +100,8 @@ function createCategoryFunction(config) {
       }
     }
 
+    // Note: versionData is not passed here - it's set later in simulation.js
+    // This is because versionData needs to be loaded from JSON files
     const game = new Game(gameVersion);
     
     // Set target cookies
@@ -127,8 +129,8 @@ function createCategoryFunction(config) {
       game.timeElapsed = config.initialTime;
     }
     
-    // Make initial purchases
-    if (config.initialPurchases && Array.isArray(config.initialPurchases)) {
+    // Make initial purchases (skip if starting buildings are provided from imported save)
+    if (!skipInitialPurchases && config.initialPurchases && Array.isArray(config.initialPurchases)) {
       for (const buildingName of config.initialPurchases) {
         game.purchaseBuilding(buildingName);
       }

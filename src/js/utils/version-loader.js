@@ -238,8 +238,24 @@ export async function loadVersionById(versionId, options = {}) {
   }
 }
 
-
-
+/**
+ * Loads raw version JSON data by version ID (for checking effect types like kitten upgrades)
+ * Returns the raw JSON data without processing
+ * @param {string} versionId - Version ID (e.g., 'v2052', 'v2031')
+ * @returns {Promise<Object>} Promise resolving to raw version JSON data
+ */
+export async function loadVersionDataById(versionId) {
+  // Find the version module in the pre-loaded glob
+  const versionPath = `../../data/versions/${versionId}.json`;
+  const versionDataModule = versionModules[versionPath];
+  
+  if (!versionDataModule) {
+    throw new Error(`Version ${versionId} not found in versionModules. Available keys: ${Object.keys(versionModules).slice(0, 5).join(', ')}...`);
+  }
+  
+  // Extract the raw version data (could be default export or the module itself)
+  return versionDataModule.default || versionDataModule;
+}
 
 
 

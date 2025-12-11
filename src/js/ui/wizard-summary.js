@@ -103,6 +103,18 @@ export class WizardSummary {
     }
     html += '</div>';
 
+    // Step 3: Algorithm Settings
+    html += '<div class="summary-item">';
+    html += '<h3>Algorithm Settings</h3>';
+    html += '<div class="algorithm-settings" style="display: flex; flex-direction: column; gap: 8px;">';
+    html += '<div style="display: flex; align-items: center; gap: 10px;">';
+    html += '<label for="lookahead-input" style="min-width: 100px;">Lookahead:</label>';
+    html += '<input type="number" id="lookahead-input" min="1" max="5" value="' + (this.wizardState.step3Data?.lookahead || 1) + '" style="width: 60px; padding: 4px;" />';
+    html += '</div>';
+    html += '<span class="setting-description" style="font-size: 0.9em; color: #666; margin-left: 110px;">Higher values provide better optimization but are slower (1-5, default: 1)</span>';
+    html += '</div>';
+    html += '</div>';
+
     html += '</div>';
     return html;
   }
@@ -247,6 +259,22 @@ export class WizardSummary {
       });
     } else {
       console.warn('[WizardSummary] Calculate button not found!');
+    }
+    
+    // Attach lookahead input listener
+    const lookaheadInput = this.container.querySelector('#lookahead-input');
+    if (lookaheadInput) {
+      lookaheadInput.addEventListener('change', (e) => {
+        const value = parseInt(e.target.value, 10);
+        if (value >= 1 && value <= 5) {
+          if (!this.wizardState.step3Data) {
+            this.wizardState.step3Data = {};
+          }
+          this.wizardState.step3Data.lookahead = value;
+        } else {
+          e.target.value = this.wizardState.step3Data?.lookahead || 1;
+        }
+      });
     }
   }
 
