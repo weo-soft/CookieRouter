@@ -102,6 +102,14 @@ describe('SaveGameDetailsView', () => {
     expect(view.formatTime(3661)).toBe('1h 1m 1s');
     expect(view.formatTime(61)).toBe('1m 1s');
     expect(view.formatTime(30)).toBe('30s');
+    expect(view.formatTime(0)).toBe('0s');
+    expect(view.formatTime(86400)).toBe('1d');
+    expect(view.formatTime(90000)).toBe('1d 1h');
+    expect(view.formatTime(90061)).toBe('1d 1h 1m 1s');
+    expect(view.formatTime(31536000)).toBe('1y');
+    expect(view.formatTime(31622400)).toBe('1y 1d');
+    expect(view.formatTime(31626061)).toBe('1y 1d 1h 1m 1s');
+    expect(view.formatTime(63072000)).toBe('2y');
   });
 
   it('should escape HTML to prevent XSS', () => {

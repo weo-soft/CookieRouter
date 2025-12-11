@@ -3,7 +3,7 @@
  * Ported from Python game.py
  */
 
-import { getAchievementRequirement } from './utils/achievement-requirements.js';
+import { getAchievementRequirement, achievementRequirements } from './utils/achievement-requirements.js';
 
 export class Upgrade {
   constructor(name, req, price, effects, id = null) {
@@ -25,13 +25,15 @@ export class Effect {
 export class Game {
   static PRICE_RATE = 1.15;
 
-  constructor(version, parent = null) {
+  constructor(version, parent = null, versionData = null) {
     if (parent === null) {
       // Version data
       this.buildingNames = [...version.buildingNames];
       this.basePrices = { ...version.basePrices };
       this.baseRates = { ...version.baseRates };
       this.menu = new Set(version.menu);
+      // Store raw version data for checking upgrade effect types (e.g., kitten upgrades)
+      this.versionData = versionData;
       // Gameplay data
       this.numBuildings = {};
       for (const name of this.buildingNames) {
@@ -60,12 +62,22 @@ export class Game {
       this.targetMinBuildings = null; // minimum count across all building types
       this.targetBuildingLevel = null; // { building: string, level: number }
       this.achievementGoals = []; // Array of achievement IDs being targeted
+      // Sugar Lump state tracking
+      this.sugarLumpsUnlocked = false;
+      this.sugarLumpsUnlockTime = null; // Time when 1B cookies reached
+      this.spentSugarLumps = 0;
+      this.buildingLevels = {};
+      for (const name of this.buildingNames) {
+        this.buildingLevels[name] = 0;
+      }
     } else {
       // Version data from parent
       this.buildingNames = [...parent.buildingNames];
       this.basePrices = { ...parent.basePrices };
       this.baseRates = { ...parent.baseRates };
       this.menu = new Set(parent.menu);
+      // Copy version data reference from parent
+      this.versionData = parent.versionData;
       // Gameplay data
       this.numBuildings = { ...parent.numBuildings };
       this.effects = {};
@@ -89,6 +101,11 @@ export class Game {
       this.targetMinBuildings = parent.targetMinBuildings;
       this.targetBuildingLevel = parent.targetBuildingLevel ? { ...parent.targetBuildingLevel } : null;
       this.achievementGoals = [...parent.achievementGoals];
+      // Sugar Lump state tracking
+      this.sugarLumpsUnlocked = parent.sugarLumpsUnlocked;
+      this.sugarLumpsUnlockTime = parent.sugarLumpsUnlockTime;
+      this.spentSugarLumps = parent.spentSugarLumps;
+      this.buildingLevels = { ...parent.buildingLevels };
     }
   }
 
@@ -122,6 +139,24 @@ export class Game {
       if (!child.purchaseUpgrade(upgrade)) continue;
       yield child;
     }
+    // Sugar Lump building upgrades
+    const availableSugarLumps = this.getAvailableSugarLumps();
+    if (availableSugarLumps > 0) {
+      for (const buildingName of this.buildingNames) {
+        if (this.numBuildings[buildingName] === 0) continue; // Must own building
+        
+        const currentLevel = this.buildingLevels[buildingName] || 0;
+        const nextLevel = currentLevel + 1;
+        const cost = nextLevel; // Cost to upgrade TO next level
+        
+        if (availableSugarLumps >= cost) {
+          const child = new Game(null, this);
+          if (child.upgradeBuildingWithSugarLump(buildingName)) {
+            yield child;
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -144,9 +179,65 @@ export class Game {
   buildingRate(buildingName) {
     let r = this.baseRates[buildingName];
     const buildingEffects = [...this.effects[buildingName]].sort((a, b) => b.priority - a.priority);
+    
+    // Separate fingersBoost effects from other effects
+    // Fingers upgrades multiply each other, so we need to handle them specially
+    const fingersEffects = [];
+    const otherEffects = [];
+    
     for (const effect of buildingEffects) {
+      // Check if this is a fingersBoost effect by examining the function
+      // FingersBoost effects add (0.1 * multiplier * nonCursorBuildings) to the rate
+      // We can identify them by checking if they access numBuildings and exclude Cursor
+      // For now, we'll use a simpler approach: check if effect has a special property
+      // or we can check the effect's behavior
+      if (effect.isFingersBoost) {
+        fingersEffects.push(effect);
+      } else {
+        otherEffects.push(effect);
+      }
+    }
+    
+    // Apply non-fingers effects first (multipliers, synergies, etc.)
+    for (const effect of otherEffects) {
       r = effect.func(r, this);
     }
+    
+    // Apply fingers effects multiplicatively
+    // Fingers upgrades stack multiplicatively: Thousand (1x), Million (5x), Billion (10x), Trillion+ (20x)
+    // So if we have Thousand, Million, and Billion: 0.1 * 1 * 5 * 10 = 5.0 per building
+    if (fingersEffects.length > 0) {
+      // Calculate total multiplier by multiplying all fingers multipliers
+      let totalFingersMultiplier = 1;
+      for (const effect of fingersEffects) {
+        // Extract multiplier from effect (stored in effect metadata or calculate from effect)
+        // The multiplier is stored in the effect's params when created
+        // We need to extract it - for now, we'll calculate it from the effect function
+        // Actually, a better approach: store multiplier in effect metadata
+        const multiplier = effect.fingersMultiplier || 1;
+        totalFingersMultiplier *= multiplier;
+      }
+      
+      // Calculate non-cursor buildings
+      let nonCursorBuildings = 0;
+      for (const name of this.buildingNames) {
+        if (name !== 'Cursor') {
+          nonCursorBuildings += this.numBuildings[name];
+        }
+      }
+      
+      // Apply fingers boost: base 0.1 per building, multiplied by total multiplier
+      const fingersBoost = 0.1 * totalFingersMultiplier * nonCursorBuildings;
+      r += fingersBoost;
+    }
+    
+    // Apply Sugar Lump level bonus (multiplicative +1% per level)
+    const level = this.buildingLevels[buildingName] || 0;
+    if (level > 0) {
+      const levelMultiplier = 1 + (level * 0.01); // +1% per level
+      r = r * levelMultiplier;
+    }
+    
     return r;
   }
 
@@ -174,9 +265,46 @@ export class Game {
    */
   mouseRate() {
     let r = 1.0;
-    for (const effect of this.effects['mouse']) {
+    const mouseEffects = [...this.effects['mouse']].sort((a, b) => b.priority - a.priority);
+    
+    // Separate fingersBoost effects from other effects (same as buildingRate)
+    const fingersEffects = [];
+    const otherEffects = [];
+    
+    for (const effect of mouseEffects) {
+      if (effect.isFingersBoost) {
+        fingersEffects.push(effect);
+      } else {
+        otherEffects.push(effect);
+      }
+    }
+    
+    // Apply non-fingers effects first
+    for (const effect of otherEffects) {
       r = effect.func(r, this);
     }
+    
+    // Apply fingers effects multiplicatively
+    if (fingersEffects.length > 0) {
+      let totalFingersMultiplier = 1;
+      for (const effect of fingersEffects) {
+        const multiplier = effect.fingersMultiplier || 1;
+        totalFingersMultiplier *= multiplier;
+      }
+      
+      // Calculate non-cursor buildings
+      let nonCursorBuildings = 0;
+      for (const name of this.buildingNames) {
+        if (name !== 'Cursor') {
+          nonCursorBuildings += this.numBuildings[name];
+        }
+      }
+      
+      // Apply fingers boost: base 0.1 per building, multiplied by total multiplier
+      const fingersBoost = 0.1 * totalFingersMultiplier * nonCursorBuildings;
+      r += fingersBoost;
+    }
+    
     return r * this.playerCps;
   }
 
@@ -187,6 +315,59 @@ export class Game {
     const numBuilding = this.numBuildings[buildingName];
     const basePrice = this.basePrices[buildingName];
     return Math.ceil(basePrice * Math.pow(Game.PRICE_RATE, numBuilding));
+  }
+
+  /**
+   * Calculates and returns the number of available Sugar Lumps based on time elapsed.
+   * Sugar Lumps are harvested every 24 hours (86400 seconds) after unlock.
+   * Formula: Math.floor((timeElapsed - unlockTime) / 86400) - spentSugarLumps
+   * @returns {number} Available Sugar Lumps (non-negative integer, clamped to 0)
+   */
+  getAvailableSugarLumps() {
+    if (!this.sugarLumpsUnlocked) return 0;
+    const secondsSinceUnlock = this.timeElapsed - this.sugarLumpsUnlockTime;
+    const hoursSinceUnlock = secondsSinceUnlock / 3600;
+    const harvested = Math.floor(hoursSinceUnlock / 24);
+    return Math.max(0, harvested - this.spentSugarLumps);
+  }
+
+  /**
+   * Checks if Sugar Lumps should be unlocked based on total cookies produced.
+   * Sugar Lumps unlock when totalCookies reaches 1 billion (1,000,000,000).
+   * Sets sugarLumpsUnlocked to true and records unlockTime when condition is met.
+   * Should be called whenever totalCookies changes.
+   */
+  checkSugarLumpUnlock() {
+    if (!this.sugarLumpsUnlocked && this.totalCookies >= 1000000000) {
+      this.sugarLumpsUnlocked = true;
+      this.sugarLumpsUnlockTime = this.timeElapsed;
+    }
+  }
+
+  /**
+   * Upgrades a building's Sugar Lump level by 1, spending the required Sugar Lumps.
+   * Each level provides +1% Building CpS (multiplicative bonus).
+   * Cost to upgrade TO level N is N Sugar Lumps (e.g., Level 1 costs 1, Level 2 costs 2, etc.).
+   * @param {string} buildingName - Name of building to upgrade
+   * @returns {boolean} True if upgrade successful, false if not affordable, building doesn't exist, or Sugar Lumps not unlocked
+   */
+  upgradeBuildingWithSugarLump(buildingName) {
+    if (!this.sugarLumpsUnlocked) return false;
+    if (!this.buildingNames.includes(buildingName)) return false;
+    if (this.numBuildings[buildingName] === 0) return false;
+    
+    const currentLevel = this.buildingLevels[buildingName] || 0;
+    const nextLevel = currentLevel + 1;
+    const cost = nextLevel; // Cost to upgrade TO next level
+    
+    if (this.getAvailableSugarLumps() >= cost) {
+      this.buildingLevels[buildingName] = nextLevel;
+      this.spentSugarLumps += cost;
+      // Add to history with special prefix to identify Sugar Lump upgrades
+      this.history.push(`SUGAR_LUMP:${buildingName}`);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -225,6 +406,7 @@ export class Game {
         const timeNeeded = remaining / this.rate();
         this.timeElapsed += timeNeeded;
         this.totalCookies = this.targetCookies;
+        this.checkSugarLumpUnlock();
       }
       return false;
     }
@@ -249,6 +431,7 @@ export class Game {
     // Add only the needed amount to totalCookies (we'll earn the needed amount)
     // This simulates producing enough cookies to make the purchase
     this.totalCookies += cookiesNeeded;
+    this.checkSugarLumpUnlock();
     // Increment cookiesSpent by the full price to track the purchase
     this.cookiesSpent += price;
 
@@ -292,15 +475,151 @@ export class Game {
   }
 
   /**
+   * Calculates which achievements are unlocked based on current game state
+   * Checks all routeable achievements, not just achievement goals
+   * @returns {number[]} Array of unlocked achievement IDs
+   */
+  calculateUnlockedAchievements() {
+    const unlocked = [];
+    
+    // Check all routeable achievements
+    for (const achievementIdStr in achievementRequirements) {
+      const achievementId = parseInt(achievementIdStr, 10);
+      const requirement = achievementRequirements[achievementIdStr];
+      
+      // Skip non-routeable achievements
+      if (!requirement || requirement.type === 'notRouteable') {
+        continue;
+      }
+      
+      // Check if this achievement is met
+      let isMet = false;
+      switch (requirement.type) {
+        case 'buildingCount':
+          const current = this.numBuildings[requirement.building] || 0;
+          isMet = current >= requirement.count;
+          break;
+        case 'cps':
+          isMet = this.rate() >= requirement.value;
+          break;
+        case 'totalCookies':
+          isMet = this.totalCookies >= requirement.value;
+          break;
+        case 'upgradeCount':
+          const upgradeCount = this.history.filter(item => !this.buildingNames.includes(item)).length;
+          isMet = upgradeCount >= requirement.count;
+          break;
+        case 'totalBuildings':
+          const total = Object.values(this.numBuildings).reduce((sum, count) => sum + count, 0);
+          isMet = total >= requirement.count;
+          break;
+        case 'minBuildings':
+          const buildingCounts = Object.values(this.numBuildings);
+          if (buildingCounts.length > 0) {
+            const min = Math.min(...buildingCounts);
+            isMet = min >= requirement.count;
+          }
+          break;
+        case 'buildingLevel':
+          const buildingCount = this.numBuildings[requirement.building] || 0;
+          isMet = buildingCount >= 1; // At least have the building
+          break;
+      }
+      
+      if (isMet) {
+        unlocked.push(achievementId);
+      }
+    }
+    
+    return unlocked;
+  }
+
+  /**
+   * Calculates milk amount from unlocked achievements
+   * Each achievement gives 4% milk
+   * @returns {number} Milk amount (e.g., 2.28 for 57 achievements = 228%)
+   */
+  calculateMilkAmount() {
+    const unlockedAchievements = this.calculateUnlockedAchievements();
+    return unlockedAchievements.length * 0.04;
+  }
+
+  /**
    * Purchase a given upgrade. True if successful.
+   * Handles kitten upgrades dynamically based on current achievement count.
    */
   purchaseUpgrade(upgrade) {
     if (this.hardcoreMode) return false;
     if (!this.hasSatisfied(upgrade.req)) return false;
     if (!this.spend(upgrade.price)) return false;
-    for (const buildingName in upgrade.effects) {
-      this.effects[buildingName].push(upgrade.effects[buildingName]);
+    
+    // Check if this is a kitten upgrade and needs dynamic calculation
+    let hasKittenEffect = false;
+    let kittenMilkFactor = null;
+    let kittenTargets = []; // Track which targets have kitten effects
+    
+    if (this.versionData && this.versionData.upgrades) {
+      const upgradeDef = this.versionData.upgrades.find(u => u.name === upgrade.name);
+      if (upgradeDef && upgradeDef.effects) {
+        for (const [target, effectDef] of Object.entries(upgradeDef.effects)) {
+          if (effectDef.type === 'kitten' && effectDef.params && effectDef.params.length > 0) {
+            hasKittenEffect = true;
+            kittenMilkFactor = effectDef.params[0];
+            kittenTargets.push(target);
+          }
+        }
+      }
     }
+    
+    if (hasKittenEffect && kittenMilkFactor !== null) {
+      // This is a kitten upgrade - calculate dynamic boost based on current milk amount
+      const milkAmount = this.calculateMilkAmount();
+      const boostPercent = (kittenMilkFactor * milkAmount) * 100;
+      
+      // Create dynamic percentBoost effect (priority 0, same as regular percentBoost)
+      const dynamicEffect = new Effect(0, (r) => r * (1 + boostPercent / 100));
+      
+      // Apply dynamic effect to all targets that the upgrade affects
+      // If upgrade affects 'all', apply to all buildings
+      if (kittenTargets.includes('all')) {
+        for (const buildingName of this.buildingNames) {
+          this.effects[buildingName].push(dynamicEffect);
+        }
+      } else {
+        // Apply to specific targets
+        for (const target of kittenTargets) {
+          if (target === 'mouse') {
+            // Mouse upgrades affect Cursor
+            if (this.buildingNames.includes('Cursor')) {
+              this.effects['Cursor'].push(dynamicEffect);
+            }
+          } else if (this.effects[target]) {
+            this.effects[target].push(dynamicEffect);
+          }
+        }
+      }
+      
+      // Don't apply upgrade.effects for kitten targets - they contain placeholder effects
+      // Only apply effects for non-kitten targets (if any)
+      for (const buildingName in upgrade.effects) {
+        // Skip targets that have kitten effects (they're already handled above)
+        const isKittenTarget = kittenTargets.includes(buildingName) || 
+                               (buildingName === 'Cursor' && kittenTargets.includes('mouse')) ||
+                               (kittenTargets.includes('all') && this.buildingNames.includes(buildingName));
+        
+        if (!isKittenTarget) {
+          // This target doesn't have kitten effects, apply the effect normally
+          this.effects[buildingName].push(upgrade.effects[buildingName]);
+        }
+        // If it's a kitten target, we skip it (already applied dynamic effect above)
+      }
+    } else {
+      // Regular upgrade - apply effects as-is
+      for (const buildingName in upgrade.effects) {
+        this.effects[buildingName].push(upgrade.effects[buildingName]);
+      }
+    }
+    
     this.history.push(upgrade.name);
     this.menu.delete(upgrade);
     return true;

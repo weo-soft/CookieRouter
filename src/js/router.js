@@ -207,7 +207,36 @@ export class Router {
     let validChildCount = 0;
     let descendantCount = 0;
 
+    // First, check for Sugar Lump upgrades - these should be prioritized as they're instant and always beneficial
+    let sugarLumpUpgrade = null;
     for (const child of game.children()) {
+      // Check if this is a Sugar Lump upgrade (history ends with SUGAR_LUMP:...)
+      const lastHistoryItem = child.history[child.history.length - 1];
+      if (lastHistoryItem && typeof lastHistoryItem === 'string' && lastHistoryItem.startsWith('SUGAR_LUMP:')) {
+        // Sugar Lump upgrade - instant, no time cost, always improves CpS
+        const rateChange = child.rate() - gameRate;
+        if (rateChange > 0) {
+          // Sugar Lump upgrades are instant (timeChange = 0), so payoffLoad = 0
+          // This makes them very attractive - prioritize them
+          sugarLumpUpgrade = child;
+          break; // Take the first available Sugar Lump upgrade (they're all instant and beneficial)
+        }
+      }
+    }
+    
+    // If we found a Sugar Lump upgrade, return it immediately (they're always optimal when available)
+    if (sugarLumpUpgrade !== null) {
+      return sugarLumpUpgrade;
+    }
+
+    // Otherwise, evaluate regular children (buildings, upgrades)
+    for (const child of game.children()) {
+      // Skip Sugar Lump upgrades - we already checked them above
+      const lastHistoryItem = child.history[child.history.length - 1];
+      if (lastHistoryItem && typeof lastHistoryItem === 'string' && lastHistoryItem.startsWith('SUGAR_LUMP:')) {
+        continue;
+      }
+      
       childCount++;
       let bestDescendantPl = null;
       let bestDescendantPrice = null;
