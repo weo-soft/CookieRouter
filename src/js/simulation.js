@@ -22,6 +22,7 @@ import { extractFinalStateFromRoute } from './utils/route-state-extractor.js';
  */
 export async function calculateRoute(category, startingBuildings = {}, options = {}, versionId = 'v2052') {
   // Check for imported save game data
+  // Uses new parser structure: buildings array, miscGameData, runDetails, preferences
   const importedSaveGame = getImportedSaveGame();
   let usedImportedData = false;
   let effectiveVersionId = versionId;
@@ -37,15 +38,21 @@ export async function calculateRoute(category, startingBuildings = {}, options =
       effectiveVersionId = importedSaveGame.version;
     }
     
-    // Merge imported building counts with manual starting buildings
-    // Manual starting buildings take precedence (override imported data)
-    if (importedSaveGame.buildingCounts) {
-      effectiveStartingBuildings = { ...importedSaveGame.buildingCounts, ...startingBuildings };
+    // Extract building counts from buildings array (new parser structure)
+    if (importedSaveGame.buildings && Array.isArray(importedSaveGame.buildings)) {
+      const buildingCountsFromArray = {};
+      for (const building of importedSaveGame.buildings) {
+        if (building.name && building.amountOwned !== undefined) {
+          buildingCountsFromArray[building.name] = building.amountOwned;
+        }
+      }
+      effectiveStartingBuildings = { ...buildingCountsFromArray, ...startingBuildings };
     }
     
-    // Use imported hardcore mode if category doesn't specify it
-    if (importedSaveGame.hardcoreMode !== undefined && category.hardcoreMode === undefined) {
-      effectiveHardcoreMode = importedSaveGame.hardcoreMode;
+    // Use imported hardcore mode from miscGameData.ascensionMode (new parser structure)
+    // ascensionMode: 0 = normal, 1 = hardcore
+    if (category.hardcoreMode === undefined && importedSaveGame.miscGameData && importedSaveGame.miscGameData.ascensionMode !== undefined) {
+      effectiveHardcoreMode = importedSaveGame.miscGameData.ascensionMode === 1;
     }
   }
 
@@ -61,15 +68,32 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   
   // Load the selected version (use effective version from imported data if available)
   let version;
+  let versionData = null; // Store raw version JSON data for checking effect types
   try {
     const { loadVersionById } = await import('./utils/version-loader.js');
     version = await loadVersionById(effectiveVersionId);
+    
+    // Load raw version JSON data to check effect types (for kitten upgrades)
+    const versionModules = import.meta.glob('../../data/versions/v*.json', { eager: true });
+    const versionPath = `../../data/versions/${effectiveVersionId}.json`;
+    const versionDataModule = versionModules[versionPath];
+    if (versionDataModule) {
+      versionData = versionDataModule.default || versionDataModule;
+    }
   } catch (error) {
     console.warn(`Failed to load version ${effectiveVersionId}, falling back to v2052`, error);
     try {
       const { loadVersionById } = await import('./utils/version-loader.js');
       version = await loadVersionById('v2052');
       effectiveVersionId = 'v2052';
+      
+      // Load raw version JSON data for fallback version
+      const versionModules = import.meta.glob('../../data/versions/v*.json', { eager: true });
+      const versionPath = `../../data/versions/v2052.json`;
+      const versionDataModule = versionModules[versionPath];
+      if (versionDataModule) {
+        versionData = versionDataModule.default || versionDataModule;
+      }
     } catch (fallbackError) {
       throw new Error(`Failed to load version ${effectiveVersionId} and fallback v2052: ${fallbackError.message}`);
     }
@@ -95,9 +119,11 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     
     if (functionName && categoryFunctions[functionName]) {
       game = await categoryFunctions[functionName](version, category.playerCps || 8, category.playerDelay || 1);
+      // Set versionData after creation (category functions create Game internally)
+      game.versionData = versionData;
     } else {
       // Fallback: create game manually
-      game = new Game(version);
+      game = new Game(version, null, versionData);
       game.targetCookies = category.targetCookies;
       game.playerCps = category.playerCps || 8;
       game.playerDelay = category.playerDelay || 1;
@@ -105,7 +131,7 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     }
   } else {
     // Create game from custom category
-    game = new Game(version);
+    game = new Game(version, null, versionData);
     game.targetCookies = category.targetCookies;
     game.playerCps = category.playerCps || 8;
     game.playerDelay = category.playerDelay || 1;
@@ -121,17 +147,95 @@ export async function calculateRoute(category, startingBuildings = {}, options =
 
   // Apply starting buildings (merged from imported data and manual override)
   // This must be done BEFORE applying upgrades so that upgrade requirements can be checked correctly
-  for (const [buildingName, count] of Object.entries(effectiveStartingBuildings)) {
-    if (game.buildingNames.includes(buildingName)) {
-      game.numBuildings[buildingName] = (game.numBuildings[buildingName] || 0) + count;
+  // If we have starting buildings (from import or manual), they represent the complete initial state,
+  // so we SET the counts instead of adding to avoid double-counting with category initialPurchases
+  if (Object.keys(effectiveStartingBuildings).length > 0) {
+    // We have starting buildings - set them directly (overriding any category initialPurchases)
+    for (const [buildingName, count] of Object.entries(effectiveStartingBuildings)) {
+      if (game.buildingNames.includes(buildingName)) {
+        game.numBuildings[buildingName] = count;
+      }
+    }
+  }
+
+  // Apply building levels from imported save game if available (new parser structure)
+  // Building levels are used for Sugar Lump upgrades
+  if (importedSaveGame && importedSaveGame.buildings && Array.isArray(importedSaveGame.buildings)) {
+    for (const building of importedSaveGame.buildings) {
+      if (building.name && building.level !== undefined && building.level > 0) {
+        if (game.buildingNames.includes(building.name)) {
+          // Initialize buildingLevels object if it doesn't exist
+          if (!game.buildingLevels) {
+            game.buildingLevels = {};
+          }
+          game.buildingLevels[building.name] = building.level;
+        }
+      }
     }
   }
 
   // Apply initial cookie count from imported save game if available
   // This allows routes to start with available cookies, enabling immediate purchases of expensive buildings
-  if (importedSaveGame && importedSaveGame.totalCookies !== undefined && importedSaveGame.totalCookies > 0) {
-    game.totalCookies = importedSaveGame.totalCookies;
+  // Uses miscGameData.cookies from new parser structure
+  if (importedSaveGame && importedSaveGame.miscGameData && importedSaveGame.miscGameData.cookies !== undefined) {
+    const initialCookies = importedSaveGame.miscGameData.cookies;
+    if (initialCookies > 0) {
+      game.totalCookies = initialCookies;
+    }
   }
+
+  // Apply elapsed time from imported save game if available
+  // This ensures route calculations account for time already elapsed in the save game
+  // This affects Sugar Lump harvesting timing and total route time
+  if (importedSaveGame && importedSaveGame.timeElapsed !== undefined && importedSaveGame.timeElapsed > 0) {
+    game.timeElapsed = importedSaveGame.timeElapsed;
+    
+    // If Sugar Lumps are already unlocked in the save game, we need to set the unlock time
+    // The unlock time should be set to when Sugar Lumps were first unlocked (before the elapsed time)
+    // However, we don't have that exact time, so we'll check if totalCookies >= 1B and unlock if needed
+    // The sugarLumpsUnlockTime will be set to the current timeElapsed if unlocking now,
+    // or we need to estimate it based on when 1B cookies was reached
+    // For now, if we have building levels, assume Sugar Lumps were unlocked earlier
+    // and set unlockTime to a reasonable value (e.g., when 1B cookies would have been reached)
+    if (game.totalCookies >= 1000000000) {
+      game.checkSugarLumpUnlock();
+      // If Sugar Lumps weren't unlocked yet but we have building levels, unlock them
+      // This handles the case where the save game has building levels but Sugar Lumps weren't tracked
+      if (!game.sugarLumpsUnlocked && importedSaveGame.buildings) {
+        const hasBuildingLevels = importedSaveGame.buildings.some(b => b.level && b.level > 0);
+        if (hasBuildingLevels) {
+          // Sugar Lumps must have been unlocked - estimate unlock time
+          // Assume they were unlocked when 1B cookies was reached
+          // Estimate: if we have X cookies now and rate is R, time to reach 1B was approximately (1B / R)
+          // But we don't know the historical rate, so use a conservative estimate
+          // Set unlockTime to be at least 24 hours before current time (to allow for harvesting)
+          const estimatedUnlockTime = Math.max(0, game.timeElapsed - 86400); // At least 24h ago
+          game.sugarLumpsUnlocked = true;
+          game.sugarLumpsUnlockTime = estimatedUnlockTime;
+        }
+      }
+    }
+  }
+
+  // Calculate initial milk amount from achievements (for kitten upgrades)
+  // Each achievement gives 4% milk
+  // This will be recalculated dynamically when kitten upgrades are purchased
+  // based on current game state (achievements unlocked at that step)
+  // Parser returns object array when mapping available, boolean array when not (both are valid)
+  let initialAchievementCount = 0;
+  if (importedSaveGame && importedSaveGame.achievements && Array.isArray(importedSaveGame.achievements)) {
+    if (importedSaveGame.achievements.length > 0) {
+      // Check if it's a boolean array (Python parser format) or object array (with mapping)
+      if (typeof importedSaveGame.achievements[0] === 'boolean') {
+        // Boolean array: count true values
+        initialAchievementCount = importedSaveGame.achievements.filter(a => a === true).length;
+      } else if (typeof importedSaveGame.achievements[0] === 'object') {
+        // Object array: count all entries (each represents an unlocked achievement)
+        initialAchievementCount = importedSaveGame.achievements.length;
+      }
+    }
+  }
+  const initialMilkAmount = initialAchievementCount * 0.04; // e.g., 57 achievements = 2.28 = 228%
 
   // Apply purchased upgrades from imported save and manual setup
   let purchasedUpgrades = [];
@@ -142,6 +246,9 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   if (options.manualUpgrades && Array.isArray(options.manualUpgrades)) {
     purchasedUpgrades = [...options.manualUpgrades];
   }
+  
+  // Import createPercentBoost for dynamic kitten upgrade calculation
+  const { createPercentBoost } = await import('./utils/upgrade-effects.js');
   
   // Apply purchased upgrades to the game
   // Buildings are already applied above, so upgrade requirements can be checked correctly
@@ -165,9 +272,45 @@ export async function calculateRoute(category, startingBuildings = {}, options =
       }
       // Remove from menu
       game.menu.delete(upgrade);
-      // Apply effects
-      for (const buildingName in upgrade.effects) {
-        game.effects[buildingName].push(upgrade.effects[buildingName]);
+      
+      // Apply effects - special handling for kitten upgrades
+      // Check if this upgrade has any kitten effects (detected by effect type)
+      let hasKittenEffect = false;
+      let kittenMilkFactor = null;
+      
+      // Check upgrade effects for kitten type by looking at the original upgrade definition
+      // Since effects are already converted to Effect objects, we need to check the version data
+      if (versionData && versionData.upgrades) {
+        const upgradeDef = versionData.upgrades.find(u => u.name === upgradeName);
+        if (upgradeDef && upgradeDef.effects) {
+          for (const [target, effectDef] of Object.entries(upgradeDef.effects)) {
+            if (effectDef.type === 'kitten' && effectDef.params && effectDef.params.length > 0) {
+              hasKittenEffect = true;
+              kittenMilkFactor = effectDef.params[0];
+              break;
+            }
+          }
+        }
+      }
+      
+      if (hasKittenEffect && kittenMilkFactor !== null) {
+        // This is a kitten upgrade - calculate dynamic boost based on current milk amount
+        // Milk amount is calculated from achievements unlocked at current game state
+        const currentMilkAmount = game.calculateMilkAmount();
+        // Formula: boost = (milk_factor * milk_amount) * 100
+        const boostPercent = (kittenMilkFactor * currentMilkAmount) * 100;
+        
+        // Apply the dynamically calculated percentBoost effect to all targets
+        for (const buildingName in upgrade.effects) {
+          // Create a new percentBoost effect with the calculated value
+          const dynamicEffect = createPercentBoost(boostPercent);
+          game.effects[buildingName].push(dynamicEffect);
+        }
+      } else {
+        // Regular upgrade - apply effects as-is
+        for (const buildingName in upgrade.effects) {
+          game.effects[buildingName].push(upgrade.effects[buildingName]);
+        }
       }
       // Add to history
       game.history.push(upgrade.name);
@@ -276,6 +419,11 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   const routeBuildings = [];
   const stepGame = new Game(null, game);
   
+  // Ensure versionData is copied (should be copied from parent, but ensure it's set)
+  if (game.versionData && !stepGame.versionData) {
+    stepGame.versionData = game.versionData;
+  }
+  
   // Reset to initial state
   stepGame.totalCookies = game.totalCookies;
   stepGame.timeElapsed = game.timeElapsed;
@@ -292,24 +440,49 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     stepGame.targetBuildingLevel = game.targetBuildingLevel ? { ...game.targetBuildingLevel } : null;
   }
   
+  // Copy Sugar Lump state to stepGame
+  stepGame.sugarLumpsUnlocked = game.sugarLumpsUnlocked;
+  stepGame.sugarLumpsUnlockTime = game.sugarLumpsUnlockTime;
+  stepGame.spentSugarLumps = game.spentSugarLumps;
+  stepGame.buildingLevels = { ...game.buildingLevels };
+  
   // Track achievement unlocks
   const achievementUnlocks = [];
   const unlockedAchievements = new Set();
   
-  let previousTimeElapsed = 0; // Track previous step's time for calculating time since last step
+  // Initialize previousTimeElapsed with the game's initial timeElapsed (from imported save if available)
+  // This ensures time calculations are relative to the actual start time, not 0
+  let previousTimeElapsed = stepGame.timeElapsed; // Track previous step's time for calculating time since last step
   let stepOrder = 0; // Track actual step order (only increments when a step is created, not skipped)
   
   for (let i = 0; i < result.history.length; i++) {
     const item = result.history[i];
+    
+    // Capture Sugar Lump state before processing this history item
+    let beforeSugarLumpState = null;
+    if (stepGame.sugarLumpsUnlocked) {
+      beforeSugarLumpState = {
+        available: stepGame.getAvailableSugarLumps(),
+        buildingLevels: { ...stepGame.buildingLevels },
+        timeElapsed: stepGame.timeElapsed
+      };
+    }
     
     // Capture rate and cookies before purchase
     const rateBefore = stepGame.rate();
     const cookiesBefore = stepGame.totalCookies;
     let price;
     
-    // Check if it's a building or upgrade
+    // Check if it's a building, upgrade, or Sugar Lump upgrade
     let buildingCount = null; // Will be set if it's a building
-    if (stepGame.buildingNames.includes(item)) {
+    if (item.startsWith('SUGAR_LUMP:')) {
+      // It's a Sugar Lump building upgrade
+      const buildingName = item.substring('SUGAR_LUMP:'.length);
+      // Sugar Lump upgrades don't cost cookies, so price is 0
+      price = 0;
+      // The upgrade was already applied during route calculation, so we just need to track it
+      // buildingLevels should already be updated
+    } else if (stepGame.buildingNames.includes(item)) {
       // It's a building
       price = stepGame.buildingPrice(item);
       stepGame.purchaseBuilding(item);
@@ -401,12 +574,24 @@ export async function calculateRoute(category, startingBuildings = {}, options =
     // Calculable values (cookiesPerSecond, timeElapsed, totalCookies) will be computed on display
     const step = {
       order: stepOrder, // Use stepOrder instead of i + 1 to avoid gaps when items are skipped
-      buildingName: item, // Building or upgrade name
+      buildingName: item.startsWith('SUGAR_LUMP:') ? item.substring('SUGAR_LUMP:'.length) : item, // Building or upgrade name
       cookiesRequired: price,
       cpsIncrease: cpsIncrease,
       timeSinceLastStep: timeSinceLastStep,
       buildingCount: buildingCount, // null for upgrades, number for buildings
     };
+    
+    // Mark Sugar Lump upgrade steps with type
+    if (item.startsWith('SUGAR_LUMP:')) {
+      const buildingName = item.substring('SUGAR_LUMP:'.length);
+      const currentLevel = stepGame.buildingLevels[buildingName] || 0;
+      step.type = 'buildingLevelUpgrade';
+      step.buildingName = buildingName;
+      step.level = currentLevel;
+      step.previousLevel = beforeSugarLumpState ? (beforeSugarLumpState.buildingLevels[buildingName] || 0) : 0;
+      step.cost = currentLevel;
+      step.availableSugarLumps = stepGame.getAvailableSugarLumps();
+    }
     
     // Store initial values for first step only (needed for calculation chain)
     if (stepOrder === 1) {
@@ -420,6 +605,17 @@ export async function calculateRoute(category, startingBuildings = {}, options =
       step.achievementUnlocks = stepAchievementUnlocks;
     }
     
+    // Include Sugar Lump state if unlocked
+    if (stepGame.sugarLumpsUnlocked) {
+      step.sugarLumps = {
+        unlocked: true,
+        unlockTime: stepGame.sugarLumpsUnlockTime,
+        available: stepGame.getAvailableSugarLumps(),
+        spent: stepGame.spentSugarLumps,
+        buildingLevels: { ...stepGame.buildingLevels }
+      };
+    }
+    
     routeBuildings.push(step);
     
     // Track achievement unlocks for route metadata
@@ -428,6 +624,40 @@ export async function calculateRoute(category, startingBuildings = {}, options =
         stepIndex: stepOrder, // Use stepOrder instead of i + 1
         achievementIds: stepAchievementUnlocks
       });
+    }
+    
+    // Check for Sugar Lump events AFTER processing this history item
+    if (stepGame.sugarLumpsUnlocked && beforeSugarLumpState) {
+      const afterAvailable = stepGame.getAvailableSugarLumps();
+      const beforeAvailable = beforeSugarLumpState.available;
+      
+      // Check for harvest events (available Sugar Lumps increased due to time)
+      if (afterAvailable > beforeAvailable) {
+        // Calculate harvest number
+        const secondsSinceUnlock = stepGame.timeElapsed - stepGame.sugarLumpsUnlockTime;
+        const harvestNumber = Math.floor(secondsSinceUnlock / 86400);
+        
+        // Create harvest step (insert before current step)
+        stepOrder++;
+        const harvestStep = {
+          type: 'sugarLumpHarvest',
+          order: stepOrder,
+          timeElapsed: stepGame.timeElapsed,
+          availableSugarLumps: afterAvailable,
+          harvestNumber: harvestNumber,
+          sugarLumps: {
+            unlocked: true,
+            unlockTime: stepGame.sugarLumpsUnlockTime,
+            available: afterAvailable,
+            spent: stepGame.spentSugarLumps,
+            buildingLevels: { ...stepGame.buildingLevels }
+          }
+        };
+        routeBuildings.push(harvestStep);
+      }
+      
+      // Note: Building level upgrades are tracked in history as 'SUGAR_LUMP:buildingName'
+      // So we don't need to detect them by comparing states here
     }
     
     // Update previousTimeElapsed for next iteration

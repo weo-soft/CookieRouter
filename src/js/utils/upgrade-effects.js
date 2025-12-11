@@ -33,11 +33,27 @@ export function createGrandmaBoost(n) {
 
 /**
  * Creates a fingers boost effect that adds to rate based on total non-cursor buildings
- * Formula: rate + x * sum(all buildings except Cursor)
- * @param {number} x - Additive value per building
+ * Fingers upgrades stack multiplicatively:
+ * - Thousand fingers: base value (0.1 per building, multiplier = 1)
+ * - Million fingers: multiplies Thousand fingers by 5 (multiplier = 5)
+ * - Billion fingers: multiplies Million fingers by 5 (multiplier = 5)
+ * 
+ * According to the wiki: https://cookieclicker.fandom.com/wiki/Upgrades
+ * - Thousand fingers: "+0.1 cookies for each non-cursor object owned"
+ * - Million fingers: "Multiplies the gain from Thousand fingers by 5"
+ * - Billion fingers: "Multiplies the gain from Thousand fingers by 5"
+ * 
+ * The params value represents the multiplier to apply to the base (0.1):
+ * - Thousand: multiplier = 1 (base)
+ * - Million: multiplier = 5
+ * - Billion: multiplier = 5 (multiplies Million's result, so effectively 5 * 5 = 25x base = 2.5 per building)
+ * 
+ * Formula: rate + (0.1 * multiplier) * sum(all buildings except Cursor)
+ * Note: Multiple fingers upgrades multiply their multipliers together
+ * @param {number} multiplier - Multiplier to apply to base 0.1 per building
  * @returns {Effect} Effect object with priority 1 (additive)
  */
-export function createFingersBoost(x) {
+export function createFingersBoost(multiplier) {
   const func = (r, game) => {
     let sum = 0;
     for (const name of game.buildingNames) {
@@ -45,9 +61,15 @@ export function createFingersBoost(x) {
         sum += game.numBuildings[name];
       }
     }
-    return r + x * sum;
+    // Base value is 0.1 per building, multiplied by the upgrade's multiplier
+    const boostPerBuilding = 0.1 * multiplier;
+    return r + boostPerBuilding * sum;
   };
-  return new Effect(1, func);
+  const effect = new Effect(1, func);
+  // Store multiplier in effect for Game class to use when combining fingers upgrades
+  effect.isFingersBoost = true;
+  effect.fingersMultiplier = multiplier;
+  return effect;
 }
 
 /**
@@ -160,8 +182,22 @@ export function createEffectFromDefinition(def) {
       effect = createSynergyEffect(params[0], params[1]);
       break;
 
+    case 'kitten':
+      // Kitten upgrades: effect is calculated dynamically based on milk amount (achievements)
+      // Formula: boost = (milk_factor * milk_amount) * 100
+      // milk_amount = achievement_count * 0.04
+      // This effect type stores the milk factor, but the actual calculation happens in simulation.js
+      // For now, create a placeholder effect that will be replaced during simulation
+      if (params.length !== 1) {
+        throw new Error(`kitten effect requires 1 parameter (milk factor), got ${params.length}`);
+      }
+      // Create a placeholder percentBoost effect (will be replaced in simulation with dynamic calculation)
+      // Using 0 as placeholder since it will be recalculated
+      effect = createPercentBoost(0);
+      break;
+
     default:
-      throw new Error(`Unknown effect type: ${type}. Valid types: multiplier, grandmaBoost, fingersBoost, percentBoost, mouseBoost, synergy`);
+      throw new Error(`Unknown effect type: ${type}. Valid types: multiplier, grandmaBoost, fingersBoost, percentBoost, mouseBoost, synergy, kitten`);
   }
 
   // Override priority if specified in definition (allows custom priorities)

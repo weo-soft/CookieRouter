@@ -233,19 +233,44 @@ export class RouteDisplay {
           }
           return calculatedSteps.map((calculatedStep, index) => {
             const isCompleted = this.progress.completedBuildings.includes(calculatedStep.order);
-            return `
-            <div class="route-step ${isCompleted ? 'completed' : ''}" 
-                 role="listitem"
-                 data-step-order="${calculatedStep.order}">
-              <label class="step-checkbox">
-                <input 
-                  type="checkbox" 
-                  ${isCompleted ? 'checked' : ''}
-                  aria-label="Mark step ${calculatedStep.order} as completed"
-                  data-step-order="${calculatedStep.order}"
-                >
-                <span class="step-number">${calculatedStep.order}</span>
-              </label>
+            
+            // Handle different step types
+            let stepContentHtml = '';
+            if (calculatedStep.type === 'sugarLumpHarvest') {
+              // Sugar Lump harvest event
+              stepContentHtml = `
+              <div class="step-content sugar-lump-harvest">
+                <div class="step-info">
+                  <span class="step-icon">🍬</span>
+                  <span class="step-building">Sugar Lump Harvested</span>
+                  <span class="step-separator">•</span>
+                  <span class="step-detail">Harvest #${calculatedStep.harvestNumber}</span>
+                  <span class="step-separator">•</span>
+                  <span class="step-detail">Available: ${calculatedStep.availableSugarLumps}</span>
+                  <span class="step-separator">•</span>
+                  <span class="step-detail">Time: ${this.formatTime(calculatedStep.timeElapsed)}</span>
+                </div>
+              </div>
+              `;
+            } else if (calculatedStep.type === 'buildingLevelUpgrade') {
+              // Building level upgrade event
+              stepContentHtml = `
+              <div class="step-content building-level-upgrade">
+                <div class="step-info">
+                  <span class="step-icon">⭐</span>
+                  <span class="step-building">${this.escapeHtml(calculatedStep.buildingName)} Level ${calculatedStep.level}</span>
+                  <span class="step-separator">•</span>
+                  <span class="step-detail">Cost: ${calculatedStep.cost} Sugar Lump${calculatedStep.cost !== 1 ? 's' : ''}</span>
+                  <span class="step-separator">•</span>
+                  <span class="step-detail">Available: ${calculatedStep.availableSugarLumps}</span>
+                  <span class="step-separator">•</span>
+                  <span class="step-detail">Time: ${this.formatTime(calculatedStep.timeElapsed)}</span>
+                </div>
+              </div>
+              `;
+            } else {
+              // Regular building/upgrade step
+              stepContentHtml = `
               <div class="step-content">
                 <div class="step-info">
                   <span class="step-building">${this.escapeHtml(calculatedStep.buildingName)}${calculatedStep.buildingCount !== null && calculatedStep.buildingCount !== undefined ? ` [${calculatedStep.buildingCount}]` : ''}</span>
@@ -272,7 +297,34 @@ export class RouteDisplay {
                   </span>
                 </div>
                 ` : ''}
+                ${calculatedStep.sugarLumps && calculatedStep.sugarLumps.unlocked ? `
+                <div class="step-sugar-lumps-info">
+                  <span class="sugar-lump-icon">🍬</span>
+                  <span class="sugar-lump-text">
+                    Sugar Lumps: ${calculatedStep.sugarLumps.available} available, ${calculatedStep.sugarLumps.spent} spent
+                  </span>
+                </div>
+                ` : ''}
               </div>
+              `;
+            }
+            
+            // Build the full step HTML
+            return `
+            <div class="route-step ${isCompleted ? 'completed' : ''}" 
+                 role="listitem"
+                 data-step-order="${calculatedStep.order}">
+              <label class="step-checkbox">
+                <input 
+                  type="checkbox" 
+                  ${isCompleted ? 'checked' : ''}
+                  aria-label="Mark step ${calculatedStep.order} as completed"
+                  data-step-order="${calculatedStep.order}"
+                >
+                <span class="step-number">${calculatedStep.order}</span>
+              </label>
+              ${stepContentHtml}
+              ${calculatedStep.type !== 'sugarLumpHarvest' && calculatedStep.type !== 'buildingLevelUpgrade' ? `
               <button 
                 class="step-check-all-btn" 
                 data-step-order="${calculatedStep.order}"
@@ -287,6 +339,7 @@ export class RouteDisplay {
                 title="Show summary">
                 ℹ
               </button>
+              ` : ''}
             </div>
           `;
           }).join('');

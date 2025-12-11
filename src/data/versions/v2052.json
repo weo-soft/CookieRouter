@@ -151,14 +151,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            0.1
+            1
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            0.1
+            1
           ],
           "priority": 1
         }
@@ -175,14 +175,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            0.4
+            5
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            0.4
+            5
           ],
           "priority": 1
         }
@@ -199,14 +199,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            4.5
+            10
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            4.5
+            10
           ],
           "priority": 1
         }
@@ -223,14 +223,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            45
+            20
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            45
+            20
           ],
           "priority": 1
         }
@@ -651,9 +651,9 @@
       "price": 9000000,
       "effects": {
         "all": {
-          "type": "percentBoost",
+          "type": "kitten",
           "params": [
-            12.8
+            0.1
           ],
           "priority": 0
         }
@@ -666,9 +666,9 @@
       "price": 9000000000,
       "effects": {
         "all": {
-          "type": "percentBoost",
+          "type": "kitten",
           "params": [
-            24
+            0.125
           ],
           "priority": 0
         }
@@ -835,14 +835,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            950
+            20
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            950
+            20
           ],
           "priority": 1
         }
@@ -1005,9 +1005,9 @@
       "price": 90000000000000,
       "effects": {
         "all": {
-          "type": "percentBoost",
+          "type": "kitten",
           "params": [
-            43.8
+            0.15
           ],
           "priority": 0
         }
@@ -1062,8 +1062,8 @@
         "Farm": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.01,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -1088,8 +1088,8 @@
         "Mine": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.005,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -1114,8 +1114,8 @@
         "Factory": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0033333333333333333,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -1140,8 +1140,8 @@
         "Shipment": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0014285714285714286,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -1166,8 +1166,8 @@
         "Alchemy lab": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.00125,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -1192,8 +1192,8 @@
         "Portal": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0011111111111111111,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -1218,8 +1218,8 @@
         "Time machine": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.001,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -1427,14 +1427,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            19000
+            20
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            19000
+            20
           ],
           "priority": 1
         }
@@ -1594,8 +1594,8 @@
         "Antimatter condenser": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0009090909090909091,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -1668,9 +1668,9 @@
       "price": 90000000000000000,
       "effects": {
         "all": {
-          "type": "percentBoost",
+          "type": "kitten",
           "params": [
-            60
+            0.175
           ],
           "priority": 0
         }
@@ -1687,14 +1687,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            380000
+            20
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            380000
+            20
           ],
           "priority": 1
         }
@@ -2000,8 +2000,8 @@
         "Prism": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0008333333333333334,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -2014,9 +2014,9 @@
       "price": 900000000000000000000,
       "effects": {
         "all": {
-          "type": "percentBoost",
+          "type": "kitten",
           "params": [
-            80
+            0.2
           ],
           "priority": 0
         }
@@ -2033,14 +2033,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            7600000
+            20
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            7600000
+            20
           ],
           "priority": 1
         }
@@ -2057,14 +2057,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            152000000
+            20
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            152000000
+            20
           ],
           "priority": 1
         }
@@ -2591,8 +2591,8 @@
         "Bank": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0025,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -2617,8 +2617,8 @@
         "Temple": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.002,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -2643,8 +2643,8 @@
         "Wizard tower": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0016666666666666668,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -3204,9 +3204,9 @@
       "price": 9e+23,
       "effects": {
         "all": {
-          "type": "percentBoost",
+          "type": "kitten",
           "params": [
-            100
+            0.225
           ],
           "priority": 0
         }
@@ -3219,9 +3219,9 @@
       "price": 9e+26,
       "effects": {
         "all": {
-          "type": "percentBoost",
+          "type": "kitten",
           "params": [
-            120
+            0.25
           ],
           "priority": 0
         }
@@ -3272,8 +3272,8 @@
         "Chancemaker": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0007692307692307693,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -4232,8 +4232,8 @@
         "Fractal engine": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0007142857142857143,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -4445,8 +4445,8 @@
         "Javascript console": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0006666666666666666,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -4650,14 +4650,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            3040000000
+            20
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            3040000000
+            20
           ],
           "priority": 1
         }
@@ -4967,8 +4967,8 @@
         "Idleverse": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.000625,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -5533,8 +5533,8 @@
         "Cortex baker": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0005882352941176471,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -6078,14 +6078,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            60800000000
+            20
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            60800000000
+            20
           ],
           "priority": 1
         }
@@ -6123,8 +6123,8 @@
         "You": {
           "type": "synergy",
           "params": [
-            null,
-            "You"
+            0.0005555555555555556,
+            "Grandma"
           ],
           "priority": 2
         }
@@ -6746,14 +6746,14 @@
         "Cursor": {
           "type": "fingersBoost",
           "params": [
-            1216000000000
+            4882812.5
           ],
           "priority": 1
         },
         "mouse": {
           "type": "fingersBoost",
           "params": [
-            1216000000000
+            4882812.5
           ],
           "priority": 1
         }
