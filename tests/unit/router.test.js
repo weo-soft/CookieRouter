@@ -10,21 +10,21 @@ import v2031 from '../../src/data/versions/v2031.js';
 
 describe('Router', () => {
   describe('routeGPL', () => {
-    it('should route a simple game to completion', () => {
+    it('should route a simple game to completion', async () => {
       const game = new Game(v2031);
       game.targetCookies = 1000;
       game.playerCps = 8;
       game.playerDelay = 1;
 
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       // Allow small tolerance for rounding (within 1% of target)
       expect(result.totalCookies).toBeGreaterThanOrEqual(game.targetCookies * 0.99);
       expect(result.completionTime()).not.toBeNull();
     });
 
-    it('should produce same building counts as Python for hardcore category', () => {
+    it('should produce same building counts as Python for hardcore category', async () => {
       // Golden master from Python: hardcore() with v2048
       // For v2031 hardcore equivalent, we'll test with a smaller target
       const game = new Game(v2031);
@@ -34,7 +34,7 @@ describe('Router', () => {
       game.hardcoreMode = true;
 
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       // Verify completion (allow small tolerance for rounding)
       expect(result.totalCookies).toBeGreaterThanOrEqual(game.targetCookies * 0.99);
@@ -45,14 +45,14 @@ describe('Router', () => {
       expect(totalBuildings).toBeGreaterThan(0);
     });
 
-    it('should handle lookahead parameter', () => {
+    it('should handle lookahead parameter', async () => {
       const game = new Game(v2031);
       game.targetCookies = 10000;
       game.playerCps = 8;
       game.playerDelay = 1;
 
       const router = new Router();
-      const result1 = router.routeGPL(game, 1);
+      const result1 = await router.routeGPL(game, 1);
       const time1 = result1.completionTime();
 
       // Reset and try with different lookahead
@@ -60,7 +60,7 @@ describe('Router', () => {
       game2.targetCookies = 10000;
       game2.playerCps = 8;
       game2.playerDelay = 1;
-      const result2 = router.routeGPL(game2, 2);
+      const result2 = await router.routeGPL(game2, 2);
       const time2 = result2.completionTime();
 
       // Both should complete

@@ -506,7 +506,14 @@ export class Game {
           isMet = this.totalCookies >= requirement.value;
           break;
         case 'upgradeCount':
-          const upgradeCount = this.history.filter(item => !this.buildingNames.includes(item)).length;
+          // Count upgrades: exclude buildings and Sugar Lump upgrades (SUGAR_LUMP: prefix)
+          const upgradeCount = this.history.filter(item => {
+            // Exclude buildings
+            if (this.buildingNames.includes(item)) return false;
+            // Exclude Sugar Lump upgrades (they have SUGAR_LUMP: prefix)
+            if (typeof item === 'string' && item.startsWith('SUGAR_LUMP:')) return false;
+            return true;
+          }).length;
           isMet = upgradeCount >= requirement.count;
           break;
         case 'totalBuildings':
@@ -669,7 +676,14 @@ export class Game {
           }
           break;
         case 'upgradeCount':
-          const upgradeCount = this.history.filter(item => !this.buildingNames.includes(item)).length;
+          // Count upgrades: exclude buildings and Sugar Lump upgrades (SUGAR_LUMP: prefix)
+          const upgradeCount = this.history.filter(item => {
+            // Exclude buildings
+            if (this.buildingNames.includes(item)) return false;
+            // Exclude Sugar Lump upgrades (they have SUGAR_LUMP: prefix)
+            if (typeof item === 'string' && item.startsWith('SUGAR_LUMP:')) return false;
+            return true;
+          }).length;
           if (upgradeCount < requirement.count) {
             return false;
           }

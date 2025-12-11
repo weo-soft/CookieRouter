@@ -771,6 +771,47 @@ main {
   align-items: center;
 }
 
+/* Update Route Button Styles */
+#update-route-btn {
+  background: #4caf50;
+}
+
+#update-route-btn:hover {
+  background: #45a049;
+}
+
+#update-route-btn:active {
+  background: #3d8b40;
+}
+
+#update-route-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#cancel-update-btn {
+  background: #f44336;
+  color: white;
+}
+
+#cancel-update-btn:hover {
+  background: #da190b;
+}
+
+#cancel-update-btn:active {
+  background: #c62828;
+}
+
+/* Success message in route display */
+.route-display-container .success-message {
+  background-color: #4caf50;
+  color: white;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 10px 0;
+  animation: fadeIn 0.3s ease-in;
+}
+
 .route-meta {
   display: flex;
   gap: 20px;
@@ -1539,6 +1580,23 @@ main {
   .btn-primary,
   .btn-secondary {
     width: 100%;
+  }
+
+  /* Responsive design for route update UI */
+  .route-header-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  #update-route-btn,
+  #cancel-update-btn {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+  }
+
+  .route-display-container .success-message {
+    font-size: 0.9rem;
+    padding: 10px;
   }
 }
 

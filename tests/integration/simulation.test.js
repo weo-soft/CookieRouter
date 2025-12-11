@@ -10,10 +10,10 @@ import { calculateRoute } from '../../src/js/simulation.js';
 
 describe('Simulation Integration', () => {
   describe('short category routing', () => {
-    it('should complete short category route', () => {
-      const game = short();
+    it('should complete short category route', async () => {
+      const game = await short();
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       // Allow small tolerance for rounding (within 1% of target)
       expect(result.totalCookies).toBeGreaterThanOrEqual(game.targetCookies * 0.99);
@@ -21,10 +21,10 @@ describe('Simulation Integration', () => {
       expect(result.completionTime()).toBeGreaterThan(0);
     });
 
-    it('should have building purchases in history', () => {
-      const game = short();
+    it('should have building purchases in history', async () => {
+      const game = await short();
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       expect(result.history.length).toBeGreaterThan(0);
       expect(result.history.every(h => typeof h === 'string')).toBe(true);
@@ -32,20 +32,20 @@ describe('Simulation Integration', () => {
   });
 
   describe('hardcore category routing', () => {
-    it('should complete hardcore category route', () => {
-      const game = hardcore();
+    it('should complete hardcore category route', async () => {
+      const game = await hardcore();
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       // Allow small tolerance for rounding (within 0.1% of target for large numbers)
       expect(result.totalCookies).toBeGreaterThanOrEqual(game.targetCookies * 0.999);
       expect(result.completionTime()).not.toBeNull();
     });
 
-    it('should not purchase upgrades in hardcore mode', () => {
-      const game = hardcore();
+    it('should not purchase upgrades in hardcore mode', async () => {
+      const game = await hardcore();
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       // Verify no upgrades were purchased (upgrades have different names)
       const buildingNames = game.buildingNames;
@@ -53,10 +53,10 @@ describe('Simulation Integration', () => {
       expect(upgradePurchases.length).toBe(0);
     });
 
-    it('should produce reasonable building counts', () => {
-      const game = hardcore();
+    it('should produce reasonable building counts', async () => {
+      const game = await hardcore();
       const router = new Router();
-      const result = router.routeGPL(game, 1);
+      const result = await router.routeGPL(game, 1);
 
       // Should have purchased some buildings
       const totalBuildings = Object.values(result.numBuildings).reduce((a, b) => a + b, 0);
@@ -71,13 +71,13 @@ describe('Simulation Integration', () => {
   });
 
   describe('route consistency', () => {
-    it('should produce consistent routes for same input', () => {
-      const game1 = short();
-      const game2 = short();
+    it('should produce consistent routes for same input', async () => {
+      const game1 = await short();
+      const game2 = await short();
       const router = new Router();
 
-      const result1 = router.routeGPL(game1, 1);
-      const result2 = router.routeGPL(game2, 1);
+      const result1 = await router.routeGPL(game1, 1);
+      const result2 = await router.routeGPL(game2, 1);
 
       // Should complete both (allow small tolerance for rounding)
       expect(result1.totalCookies).toBeGreaterThanOrEqual(game1.targetCookies * 0.99);
