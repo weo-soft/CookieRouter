@@ -308,14 +308,6 @@ export class RouteDisplay {
                   </span>
                 </div>
                 ` : ''}
-                ${calculatedStep.sugarLumps && calculatedStep.sugarLumps.unlocked ? `
-                <div class="step-sugar-lumps-info">
-                  <span class="sugar-lump-icon">🍬</span>
-                  <span class="sugar-lump-text">
-                    Sugar Lumps: ${calculatedStep.sugarLumps.available} available, ${calculatedStep.sugarLumps.spent} spent
-                  </span>
-                </div>
-                ` : ''}
               </div>
               `;
             }

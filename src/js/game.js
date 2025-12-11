@@ -66,6 +66,7 @@ export class Game {
       // Sugar Lump state tracking
       this.sugarLumpsUnlocked = false;
       this.sugarLumpsUnlockTime = null; // Time when 1B cookies reached
+      this.sugarLumpStartTime = null; // Time (in game time, seconds) when current sugar lump started growing
       this.spentSugarLumps = 0;
       this.buildingLevels = {};
       for (const name of this.buildingNames) {
@@ -109,6 +110,7 @@ export class Game {
       // Sugar Lump state tracking
       this.sugarLumpsUnlocked = parent.sugarLumpsUnlocked;
       this.sugarLumpsUnlockTime = parent.sugarLumpsUnlockTime;
+      this.sugarLumpStartTime = parent.sugarLumpStartTime;
       this.spentSugarLumps = parent.spentSugarLumps;
       this.buildingLevels = { ...parent.buildingLevels };
       // initialAchievementCount already copied above at line 85
@@ -328,15 +330,63 @@ export class Game {
   /**
    * Calculates and returns the number of available Sugar Lumps based on time elapsed.
    * Sugar Lumps are harvested every 24 hours (86400 seconds) after unlock.
-   * Formula: Math.floor((timeElapsed - unlockTime) / 86400) - spentSugarLumps
+   * If sugarLumpStartTime is set (from save game), uses it to calculate when the next sugar lump becomes available.
+   * The next sugar lump becomes available 24 hours after sugarLumpStartTime.
+   * Otherwise, falls back to calculating from unlock time.
    * @returns {number} Available Sugar Lumps (non-negative integer, clamped to 0)
    */
   getAvailableSugarLumps() {
     if (!this.sugarLumpsUnlocked) return 0;
+    
+    // If we have sugarLumpStartTime from save game, use it for more accurate calculation
+    if (this.sugarLumpStartTime !== null && this.sugarLumpStartTime !== undefined) {
+      // The next sugar lump becomes available 24 hours after sugarLumpStartTime
+      // Calculate how many sugar lumps have become available since sugarLumpStartTime
+      // timeWhenCurrentLumpStarted is when the current (growing) lump started
+      // So the next lump becomes available at sugarLumpStartTime + 86400
+      const nextLumpTime = this.sugarLumpStartTime + 86400;
+      
+      // Calculate how many lumps were available at the time the save game was created
+      // (at sugarLumpStartTime, which is when the current lump started growing)
+      // We estimate this from unlock time, but ideally would use currentAmountOfSugarLumps from save game
+      const secondsSinceUnlockAtStart = Math.max(0, this.sugarLumpStartTime - (this.sugarLumpsUnlockTime || 0));
+      const hoursSinceUnlockAtStart = secondsSinceUnlockAtStart / 3600;
+      const harvestedAtStart = Math.floor(hoursSinceUnlockAtStart / 24);
+      const availableAtStart = Math.max(0, harvestedAtStart - this.spentSugarLumps);
+      
+      // Calculate how many new lumps have matured since sugarLumpStartTime
+      if (this.timeElapsed >= nextLumpTime) {
+        // At least one new lump has matured
+        const secondsSinceLumpStart = this.timeElapsed - this.sugarLumpStartTime;
+        const hoursSinceLumpStart = secondsSinceLumpStart / 3600;
+        // Number of lumps that have matured since sugarLumpStartTime
+        // (the lump that started at sugarLumpStartTime matures at nextLumpTime)
+        const maturedSinceStart = Math.floor(hoursSinceLumpStart / 24);
+        return Math.max(0, availableAtStart + maturedSinceStart - this.spentSugarLumps);
+      } else {
+        // No new lumps have matured yet since save game
+        return Math.max(0, availableAtStart - this.spentSugarLumps);
+      }
+    }
+    
+    // Fallback to original calculation based on unlock time
     const secondsSinceUnlock = this.timeElapsed - this.sugarLumpsUnlockTime;
     const hoursSinceUnlock = secondsSinceUnlock / 3600;
     const harvested = Math.floor(hoursSinceUnlock / 24);
     return Math.max(0, harvested - this.spentSugarLumps);
+  }
+  
+  /**
+   * Calculates when the next sugar lump will become available (in game time, seconds).
+   * Returns null if sugar lumps are not unlocked or if sugarLumpStartTime is not set.
+   * @returns {number|null} Time when next sugar lump becomes available, or null
+   */
+  getNextSugarLumpTime() {
+    if (!this.sugarLumpsUnlocked || this.sugarLumpStartTime === null || this.sugarLumpStartTime === undefined) {
+      return null;
+    }
+    // Next sugar lump becomes available 24 hours (86400 seconds) after the current one started
+    return this.sugarLumpStartTime + 86400;
   }
 
   /**

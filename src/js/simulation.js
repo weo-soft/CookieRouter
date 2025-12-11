@@ -224,6 +224,33 @@ export async function calculateRoute(category, startingBuildings = {}, options =
         }
       }
     }
+    
+    // Extract Sugar Lump Start Time from save game if available
+    // timeWhenCurrentLumpStarted is a Unix timestamp in milliseconds
+    // We need to convert it to game time (seconds since game start)
+    if (importedSaveGame.miscGameData && importedSaveGame.miscGameData.timeWhenCurrentLumpStarted !== undefined) {
+      const timeWhenCurrentLumpStarted = importedSaveGame.miscGameData.timeWhenCurrentLumpStarted;
+      if (timeWhenCurrentLumpStarted > 0) {
+        // Get startDate from runDetails (new parser structure) or from backward compatibility field
+        const startDate = importedSaveGame.runDetails?.startDate || importedSaveGame.startDate;
+        if (startDate !== undefined && startDate > 0) {
+          // Convert Unix timestamp (milliseconds) to game time (seconds)
+          // Game time = (Unix timestamp - startDate) / 1000
+          const sugarLumpStartTimeInGameTime = (timeWhenCurrentLumpStarted - startDate) / 1000;
+          game.sugarLumpStartTime = Math.max(0, sugarLumpStartTimeInGameTime);
+          
+          // Ensure Sugar Lumps are unlocked if we have a start time
+          if (!game.sugarLumpsUnlocked) {
+            game.sugarLumpsUnlocked = true;
+            // Set unlock time to be before or equal to sugarLumpStartTime
+            // If we don't have a better estimate, use sugarLumpStartTime itself
+            if (game.sugarLumpsUnlockTime === null) {
+              game.sugarLumpsUnlockTime = Math.max(0, game.sugarLumpStartTime - 86400); // At least 24h before first lump
+            }
+          }
+        }
+      }
+    }
   }
 
   // Calculate initial milk amount from achievements (for kitten upgrades)
@@ -475,6 +502,7 @@ export async function calculateRoute(category, startingBuildings = {}, options =
   // Copy Sugar Lump state to stepGame
   stepGame.sugarLumpsUnlocked = game.sugarLumpsUnlocked;
   stepGame.sugarLumpsUnlockTime = game.sugarLumpsUnlockTime;
+  stepGame.sugarLumpStartTime = game.sugarLumpStartTime;
   stepGame.spentSugarLumps = game.spentSugarLumps;
   stepGame.buildingLevels = { ...game.buildingLevels };
   
